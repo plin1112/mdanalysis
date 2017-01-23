@@ -149,6 +149,9 @@ def make_classes():
     # The 'GBase' middle man is needed so that a single topologyattr
     #  patching applies automatically to all groups.
     GBase = bases[GroupBase] = _TopologyAttrContainer._subclass()
+    GBase._SETATTR_WHITELIST = {'positions', 'velocities', 'forces',
+                                'atoms', 'segments', 'residues'}
+
     for cls in groups:
         bases[cls] = GBase._subclass()
 
@@ -251,6 +254,12 @@ class _TopologyAttrContainer(object):
             setattr(cls, attr.attrname,
                     property(getter, setter, None, attr.groupdoc))
 
+    @classmethod
+    def _whitelist(cls, attr):
+        """Allow an attribute to be set in Groups"""
+        cls._SETATTR_WHITELIST.add(attr.attrname)
+        cls._SETATTR_WHITELIST.add(attr.singular)
+
 
 class _MutableBase(object):
     """
@@ -317,9 +326,7 @@ class _ImmutableBase(object):
 
 
 class GroupBase(_MutableBase):
-    """Base class from which a Universe's Group class is built.
-
-    """
+    """Base class from which a Universe's Group class is built."""
     def __init__(self, *args):
         if len(args) == 1:
             warnings.warn("Using deprecated init method for Group. "
@@ -337,6 +344,11 @@ class GroupBase(_MutableBase):
         self._ix = np.asarray(ix, dtype=np.int64)
         self._u = u
         self._cache = dict()
+
+    def __setattr__(self, attr, value):
+        if not (attr.startswith('_') or attr in self._SETATTR_WHITELIST):
+            raise AttributeError("I cannae do it captain!")
+        super(GroupBase, self).__setattr__(attr, value)
 
     def __len__(self):
         return len(self._ix)
