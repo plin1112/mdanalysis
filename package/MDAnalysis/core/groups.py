@@ -150,7 +150,7 @@ def make_classes():
     #  patching applies automatically to all groups.
     GBase = bases[GroupBase] = _TopologyAttrContainer._subclass()
     GBase._SETATTR_WHITELIST = {'positions', 'velocities', 'forces',
-                                'atoms', 'segments', 'residues'}
+                                'atoms', 'segments', 'residues', 'is_uptodate'}
 
     for cls in groups:
         bases[cls] = GBase._subclass()
@@ -351,7 +351,7 @@ class GroupBase(_MutableBase):
         super(GroupBase, self).__setattr__(attr, value)
 
     def __len__(self):
-        return len(self._ix)
+        return len(self.ix)
 
     def __getitem__(self, item):
         # supports
@@ -362,7 +362,7 @@ class GroupBase(_MutableBase):
         # it can be sliced by all of these already,
         # so just return ourselves sliced by the item
         if isinstance(item, (int, np.int_)):
-            return self.level.singular(self._ix[item], self._u)
+            return self.level.singular(self.ix[item], self._u)
         else:
             if isinstance(item, list) and item:  # check for empty list
                 # hack to make lists into numpy arrays
@@ -371,7 +371,7 @@ class GroupBase(_MutableBase):
             # We specify _derived_class instead of self.__class__ to allow
             # subclasses, such as UpdatingAtomGroup, to control the class
             # resulting from slicing.
-            return self._derived_class(self._ix[item], self._u)
+            return self._derived_class(self.ix[item], self._u)
 
     def __repr__(self):
         name = self.level.name
@@ -401,12 +401,12 @@ class GroupBase(_MutableBase):
 
         # for the case where other is a Component, and so other._ix is an
         # integer
-        if isinstance(other._ix, int):
-            o_ix = np.array([other._ix])
+        if isinstance(other.ix, int):
+            o_ix = np.array([other.ix])
         else:
-            o_ix = other._ix
+            o_ix = other.ix
 
-        return self._derived_class(np.concatenate([self._ix, o_ix]), self._u)
+        return self._derived_class(np.concatenate([self.ix, o_ix]), self._u)
 
     def __radd__(self, other):
         """Using built-in sum requires supporting 0 + self. If other is
@@ -424,7 +424,7 @@ class GroupBase(_MutableBase):
 
         """
         if other == 0:
-            return self._derived_class(self._ix, self._u)
+            return self._derived_class(self.ix, self._u)
         else:
             raise TypeError("unsupported operand type(s) for +:"
                             " '{}' and '{}'".format(type(self).__name__,
@@ -435,7 +435,7 @@ class GroupBase(_MutableBase):
             # maybe raise TypeError instead?
             # eq method raises Error for wrong comparisons
             return False
-        return other.ix in self._ix
+        return other.ix in self.ix
 
     @property
     def universe(self):
@@ -1102,12 +1102,12 @@ class AtomGroup(GroupBase):
                   method was used.
 
         """
-        return self._u.trajectory.ts.positions[self._ix]
+        return self._u.trajectory.ts.positions[self.ix]
 
     @positions.setter
     def positions(self, values):
         ts = self._u.trajectory.ts
-        ts.positions[self._ix, :] = values
+        ts.positions[self.ix, :] = values
 
     @property
     def velocities(self):
@@ -1125,7 +1125,7 @@ class AtomGroup(GroupBase):
         """
         ts = self._u.trajectory.ts
         try:
-            return np.array(ts.velocities[self._ix])
+            return np.array(ts.velocities[self.ix])
         except (AttributeError, NoDataError):
             raise NoDataError("Timestep does not contain velocities")
 
@@ -1133,7 +1133,7 @@ class AtomGroup(GroupBase):
     def velocities(self, values):
         ts = self._u.trajectory.ts
         try:
-            ts.velocities[self._ix, :] = values
+            ts.velocities[self.ix, :] = values
         except (AttributeError, NoDataError):
             raise NoDataError("Timestep does not contain velocities")
 
@@ -1149,7 +1149,7 @@ class AtomGroup(GroupBase):
         """
         ts = self._u.trajectory.ts
         try:
-            return ts.forces[self._ix]
+            return ts.forces[self.ix]
         except (AttributeError, NoDataError):
             raise NoDataError("Timestep does not contain forces")
 
@@ -1157,7 +1157,7 @@ class AtomGroup(GroupBase):
     def forces(self, values):
         ts = self._u.trajectory.ts
         try:
-            ts.forces[self._ix, :] = values
+            ts.forces[self.ix, :] = values
         except (AttributeError, NoDataError):
             raise NoDataError("Timestep does not contain forces")
 
@@ -1493,7 +1493,7 @@ class AtomGroup(GroupBase):
         if len(self) != 2:
             raise ValueError(
                 "bond only makes sense for a group with exactly 2 atoms")
-        return topologyobjects.Bond(self._ix, self.universe)
+        return topologyobjects.Bond(self.ix, self.universe)
 
     @property
     def angle(self):
@@ -1513,7 +1513,7 @@ class AtomGroup(GroupBase):
         if len(self) != 3:
             raise ValueError(
                 "angle only makes sense for a group with exactly 3 atoms")
-        return topologyobjects.Angle(self._ix, self.universe)
+        return topologyobjects.Angle(self.ix, self.universe)
 
     @property
     def dihedral(self):
@@ -1533,7 +1533,7 @@ class AtomGroup(GroupBase):
         if len(self) != 4:
             raise ValueError(
                 "dihedral only makes sense for a group with exactly 4 atoms")
-        return topologyobjects.Dihedral(self._ix, self.universe)
+        return topologyobjects.Dihedral(self.ix, self.universe)
 
     @property
     def improper(self):
@@ -1553,7 +1553,7 @@ class AtomGroup(GroupBase):
         if len(self) != 4:
             raise ValueError(
                 "improper only makes sense for a group with exactly 4 atoms")
-        return topologyobjects.ImproperDihedral(self._ix, self.universe)
+        return topologyobjects.ImproperDihedral(self.ix, self.universe)
 
     def write(self, filename=None, file_format="PDB",
               filenamefmt="{trjname}_{frame}", **kwargs):
@@ -1823,7 +1823,7 @@ class ComponentBase(_MutableBase):
 
     def __repr__(self):
         return ("<{} {}>"
-                "".format(self.level.name.capitalize(), self._ix))
+                "".format(self.level.name.capitalize(), self.ix))
 
     def __lt__(self, other):
         if self.level != other.level:
@@ -1890,7 +1890,7 @@ class ComponentBase(_MutableBase):
 
         """
         if other == 0:
-            return self.level.plural(np.array([self._ix]), self._u)
+            return self.level.plural(np.array([self.ix]), self._u)
         else:
             raise TypeError("unsupported operand type(s) for +:"
                             " '{}' and '{}'".format(type(self).__name__,
@@ -1958,11 +1958,11 @@ class Atom(ComponentBase):
                   frame from the trajectory will replace the change with that
                   from the file
         """
-        return self._u.trajectory.ts.positions[self._ix].copy()
+        return self._u.trajectory.ts.positions[self.ix].copy()
 
     @position.setter
     def position(self, values):
-        self._u.trajectory.ts.positions[self._ix, :] = values
+        self._u.trajectory.ts.positions[self.ix, :] = values
 
     @property
     def velocity(self):
@@ -1980,7 +1980,7 @@ class Atom(ComponentBase):
         """
         ts = self._u.trajectory.ts
         try:
-            return ts.velocities[self._ix].copy()
+            return ts.velocities[self.ix].copy()
         except (AttributeError, NoDataError):
             raise NoDataError("Timestep does not contain velocities")
 
@@ -1988,7 +1988,7 @@ class Atom(ComponentBase):
     def velocity(self, values):
         ts = self._u.trajectory.ts
         try:
-            ts.velocities[self.index, :] = values
+            ts.velocities[self.ix, :] = values
         except (AttributeError, NoDataError):
             raise NoDataError("Timestep does not contain velocities")
 
@@ -2008,7 +2008,7 @@ class Atom(ComponentBase):
         """
         ts = self._u.trajectory.ts
         try:
-            return ts.forces[self._ix].copy()
+            return ts.forces[self.ix].copy()
         except (AttributeError, NoDataError):
             raise NoDataError("Timestep does not contain forces")
 
@@ -2016,7 +2016,7 @@ class Atom(ComponentBase):
     def force(self, values):
         ts = self._u.trajectory.ts
         try:
-            ts.forces[self._ix, :] = values
+            ts.forces[self.ix, :] = values
         except (AttributeError, NoDataError):
             raise NoDataError("Timestep does not contain forces")
 
@@ -2126,7 +2126,7 @@ class UpdatingAtomGroup(AtomGroup):
         # its check, no self.attribute access can be made before this line
         self._u = base_group.universe
         self._selections = selections
-        self.selection_strings = strings
+        self._selection_strings = strings
         self._base_group = base_group
         self._lastupdate = None
         self._derived_class = base_group._derived_class
@@ -2204,7 +2204,7 @@ class UpdatingAtomGroup(AtomGroup):
     def __getattribute__(self, name):
         # ALL attribute access goes through here
         # If the requested attribute isn't in the shortcut list, update ourselves
-        if not name in _UAG_SHORTCUT_ATTRS:
+        if not (name.startswith('_') or name in _UAG_SHORTCUT_ATTRS):
             self._ensure_updated()
         # Going via object.__getattribute__ then bypasses this check stage
         return object.__getattribute__(self, name)
@@ -2215,13 +2215,13 @@ class UpdatingAtomGroup(AtomGroup):
         # - recreate UAG as created through select_atoms (basegroup and selstrs)
         # even if base_group is a UAG this will work through recursion
         return (_unpickle_uag,
-                (self._base_group.__reduce__(), self._selections, self.selection_strings))
+                (self._base_group.__reduce__(), self._selections, self._selection_strings))
 
     def __repr__(self):
         basestr = super(UpdatingAtomGroup, self).__repr__()
-        if not self.selection_strings:
+        if not self._selection_strings:
             return basestr
-        sels = "'{}'".format("' + '".join(self.selection_strings))
+        sels = "'{}'".format("' + '".join(self._selection_strings))
         # Cheap comparison. Might fail for corner cases but this is
         # mostly cosmetic.
         if self._base_group is self._u.atoms:
@@ -2230,7 +2230,7 @@ class UpdatingAtomGroup(AtomGroup):
             basegrp = "another AtomGroup."
         # With a shorthand to conditionally append the 's' in 'selections'.
         return "{}, with selection{} {} on {}>".format(basestr[:-1],
-                    "s"[len(self.selection_strings)==1:], sels, basegrp)
+                    "s"[len(self._selection_strings)==1:], sels, basegrp)
 
 # Define relationships between these classes
 # with Level objects
