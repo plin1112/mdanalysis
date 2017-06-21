@@ -1,8 +1,8 @@
 # -*- Mode: python; tab-width: 4; indent-tabs-mode:nil; coding:utf-8 -*-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 
+# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -28,8 +28,9 @@ Read and write coordinates in CHARMM CARD coordinate format (suffix
 "crd"). The CHARMM "extended format" is handled automatically.
 
 """
+from __future__ import absolute_import
 
-from six.moves import zip
+from six.moves import zip, range
 
 import itertools
 import numpy as np
@@ -40,12 +41,12 @@ from ..lib import util
 from . import base
 
 
-class CRDReader(base.SingleFrameReader):
+class CRDReader(base.SingleFrameReaderBase):
     """CRD reader that implements the standard and extended CRD coordinate formats
 
     .. versionchanged:: 0.11.0
-       Now returns a ValueError instead of FormatError
-       Frames now 0-based instead of 1-based
+       Now returns a ValueError instead of FormatError.
+       Frames now 0-based instead of 1-based.
     """
     format = 'CRD'
     units = {'time': None, 'length': 'Angstrom'}
@@ -98,23 +99,26 @@ class CRDReader(base.SingleFrameReader):
     def Writer(self, filename, **kwargs):
         """Returns a CRDWriter for *filename*.
 
-        :Arguments:
-          *filename*
-              filename of the output CRD file
+        Parameters
+        ----------
+        filename: str
+            filename of the output CRD file
 
-        :Returns: :class:`CRDWriter`
+        Returns
+        -------
+        :class:`CRDWriter`
 
         """
         return CRDWriter(filename, **kwargs)
 
 
-class CRDWriter(base.Writer):
+class CRDWriter(base.WriterBase):
     """CRD writer that implements the CHARMM CRD coordinate format.
 
     It automatically writes the CHARMM EXT extended format if there
     are more than 99,999 atoms.
 
-    Requires the following attributes:
+    Requires the following attributes to be present:
     - resids
     - resnames
     - names
@@ -144,16 +148,27 @@ class CRDWriter(base.Writer):
     }
 
     def __init__(self, filename, **kwargs):
+        """
+        Parameters
+        ----------
+        filename : str or :class:`~MDAnalysis.lib.util.NamedStream`
+             name of the output file or a stream
+        """
+
         self.filename = util.filename(filename, ext='crd')
         self.crd = None
 
     def write(self, selection, frame=None):
         """Write selection at current trajectory frame to file.
 
-        write(selection,frame=FRAME)
+        Parameters
+        ----------
+        selection : AtomGroup
+             group of atoms to be written
+        frame : int (optional)
+             Move the trajectory to frame `frame`; by default, write
+             the current frame.
 
-        selection         MDAnalysis AtomGroup
-        frame             optionally move to frame FRAME
         """
         u = selection.universe
         if frame is not None:
@@ -236,9 +251,9 @@ class CRDWriter(base.Writer):
                     current_resid += 1
 
                 # Truncate numbers
-                serial = int(str(i + 1)[-serial_len:])
-                resid = int(str(resid)[-resid_len:])
-                current_resid = int(str(current_resid)[-totres_len:])
+                serial = util.ltruncate_int(i + 1, serial_len)
+                resid = util.ltruncate_int(resid, resid_len)
+                current_resid = util.ltruncate_int(current_resid, totres_len)
 
                 crd.write(at_fmt.format(
                     serial=serial, totRes=current_resid, resname=resname,

@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -47,7 +47,7 @@ import numpy as np
 
 from . import guessers
 from ..lib.util import openany
-from .base import TopologyReader, squash_by
+from .base import TopologyReaderBase, squash_by
 from ..core.topologyattrs import (
     Atomids,
     Atomnames,
@@ -63,7 +63,7 @@ from ..core.topologyattrs import (
 from ..core.topology import Topology
 
 
-class MOL2Parser(TopologyReader):
+class MOL2Parser(TopologyReaderBase):
     """Read topology from a Tripos_ MOL2_ file.
 
     Create the following Attributes:
@@ -79,7 +79,7 @@ class MOL2Parser(TopologyReader):
      - masses
 
     .. versionchanged:: 0.9
-       Now subclasses TopologyReader
+       Now subclasses TopologyReaderBase
     """
     format = 'MOL2'
 

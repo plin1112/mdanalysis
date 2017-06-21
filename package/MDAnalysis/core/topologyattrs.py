@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 fileencoding=utf-8
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -30,7 +30,7 @@ parsers.
 TopologyAttrs are used to contain attributes such as atom names or resids.
 These are usually read by the TopologyParser.
 """
-
+from __future__ import division, absolute_import
 from six.moves import zip, range
 
 import Bio.Seq
@@ -39,7 +39,11 @@ import Bio.Alphabet
 from collections import defaultdict
 import functools
 import itertools
+import numbers
 import numpy as np
+import warnings
+
+from numpy.lib.utils import deprecate
 
 from . import flags
 from ..lib.util import cached, convert_aa_code, iterable
@@ -416,6 +420,14 @@ class Atomnames(AtomAttr):
         no atoms are found, a :exc:`SelectionError` is raised.
 
         .. versionadded:: 0.9.2
+
+        .. deprecated:: 0.16.2
+           *Instant selectors* will be removed in the 1.0 release.
+           Use ``AtomGroup.select_atoms('name <name>')`` instead.
+           See issue `#1377
+           <https://github.com/MDAnalysis/mdanalysis/issues/1377>`_ for
+           more details.
+
         """
         # There can be more than one atom with the same name
         atomlist = group.atoms.unique[group.atoms.unique.names == name]
@@ -424,10 +436,12 @@ class Atomnames(AtomAttr):
                 "No atoms with name '{0}'".format(name))
         elif len(atomlist) == 1:
             # XXX: keep this, makes more sense for names
-            return atomlist[0]
-        else:
-            # XXX: but inconsistent (see residues and Issue 47)
-            return atomlist
+            atomlist = atomlist[0]
+        warnings.warn("Instant selector AtomGroup['<name>'] or AtomGroup.<name> "
+                      "is deprecated and will be removed in 1.0. "
+                      "Use AtomGroup.select_atoms('name <name>') instead.",
+                      DeprecationWarning)
+        return atomlist
 
     # AtomGroup already has a getattr
 #    transplants[AtomGroup].append(
@@ -607,7 +621,7 @@ class Masses(AtomAttr):
     def get_residues(self, rg):
         resatoms = self.top.tt.residues2atoms_2d(rg._ix)
 
-        if isinstance(rg._ix, int):
+        if isinstance(rg._ix, numbers.Integral):
             # for a single residue
             masses = self.values[resatoms].sum()
         else:
@@ -621,7 +635,7 @@ class Masses(AtomAttr):
     def get_segments(self, sg):
         segatoms = self.top.tt.segments2atoms_2d(sg._ix)
 
-        if isinstance(sg._ix, int):
+        if isinstance(sg._ix, numbers.Integral):
             # for a single segment
             masses = self.values[segatoms].sum()
         else:
@@ -885,7 +899,7 @@ class Masses(AtomAttr):
         e_val, e_vec = np.linalg.eig(atomgroup.moment_of_inertia(pbc=pbc))
 
         # Sort
-        indices = np.argsort(e_val)
+        indices = np.argsort(e_val)[::-1]
         # Return transposed in more logical form. See Issue 33.
         return e_vec[:, indices].T
 
@@ -933,7 +947,7 @@ class Charges(AtomAttr):
     def get_residues(self, rg):
         resatoms = self.top.tt.residues2atoms_2d(rg._ix)
 
-        if isinstance(rg._ix, int):
+        if isinstance(rg._ix, numbers.Integral):
             charges = self.values[resatoms].sum()
         else:
             charges = np.empty(len(rg))
@@ -945,7 +959,7 @@ class Charges(AtomAttr):
     def get_segments(self, sg):
         segatoms = self.top.tt.segments2atoms_2d(sg._ix)
 
-        if isinstance(sg._ix, int):
+        if isinstance(sg._ix, numbers.Integral):
             # for a single segment
             charges = self.values[segatoms].sum()
         else:
@@ -1056,6 +1070,13 @@ class Resnames(ResidueAttr):
     # This transplant is hardcoded for now to allow for multiple getattr things
     #transplants[Segment].append(('__getattr__', getattr__))
 
+
+    @deprecate(message="Instant selector ResidueGroup.<name> "
+               "or Segment.<name> "
+               "is deprecated and will be removed in 1.0. "
+               "Use ResidueGroup[ResidueGroup.resnames == '<name>'] "
+               "or Segment.residues[Segment.residues == '<name>'] "
+               "instead.")
     def _get_named_residue(group, resname):
         """Get all residues with name *resname* in the current ResidueGroup
         or Segment.
@@ -1066,6 +1087,15 @@ class Resnames(ResidueAttr):
         If no residues are found, a :exc:`SelectionError` is raised.
 
         .. versionadded:: 0.9.2
+
+        .. deprecated:: 0.16.2
+           *Instant selectors* will be removed in the 1.0 release.
+           Use ``ResidueGroup[ResidueGroup.resnames == '<name>']``
+           or ``Segment.residues[Segment.residues == '<name>']``
+           instead.
+           See issue `#1377
+           <https://github.com/MDAnalysis/mdanalysis/issues/1377>`_ for
+           more details.
 
         """
         # There can be more than one residue with the same name
@@ -1243,6 +1273,10 @@ class Segids(SegmentAttr):
     transplants[SegmentGroup].append(
         ('__getattr__', getattr__))
 
+    @deprecate(message="Instant selector SegmentGroup.<name> "
+               "is deprecated and will be removed in 1.0. "
+               "Use SegmentGroup[SegmentGroup.segids == '<name>'] "
+               "instead.")
     def _get_named_segment(group, segid):
         """Get all segments with name *segid* in the current SegmentGroup.
 
@@ -1252,6 +1286,13 @@ class Segids(SegmentAttr):
         If no residues are found, a :exc:`SelectionError` is raised.
 
         .. versionadded:: 0.9.2
+
+        .. deprecated:: 0.16.2
+           *Instant selectors* will be removed in the 1.0 release.
+           Use ``SegmentGroup[SegmentGroup.segids == '<name>']`` instead.
+           See issue `#1377
+           <https://github.com/MDAnalysis/mdanalysis/issues/1377>`_ for
+           more details.
 
         """
         # Undo adding 's' if segid started with digit
@@ -1362,7 +1403,7 @@ class Bonds(_Connection):
 
     Must be initialised by a list of zero based tuples.
     These indices refer to the atom indices.
-        Eg:  [(0, 1), (1, 2), (2, 3)]
+    E.g., ` [(0, 1), (1, 2), (2, 3)]`
 
     Also adds the `bonded_atoms`, `fragment` and `fragments`
     attributes.
@@ -1416,8 +1457,7 @@ class Angles(_Connection):
     """Angles between three atoms
 
     Initialise with a list of 3 long tuples
-    Eg:
-      [(0, 1, 2), (1, 2, 3), (2, 3, 4)]
+    E.g.,  `[(0, 1, 2), (1, 2, 3), (2, 3, 4)]`
 
     These indices refer to the atom indices.
     """

@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 fileencoding=utf-8
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -23,6 +23,7 @@
 """Plugin that cleans up all .npz created during testing.
 """
 # We may want to make the glob pattern an option, for extensibility.
+from __future__ import absolute_import
 
 import nose
 from nose.plugins.base import Plugin 

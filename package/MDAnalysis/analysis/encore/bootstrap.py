@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -32,6 +32,8 @@ objects) or distance matrices, by resampling with replacement.
 .. versionadded:: 0.16.0
 
 """
+from __future__ import absolute_import
+from six.moves import zip
 
 import numpy as np
 import logging
@@ -115,7 +117,7 @@ def get_distance_matrix_bootstrap_samples(distance_matrix,
 
     pc_results = pc.run()
 
-    bootstrap_matrices = zip(*pc_results)[1]
+    bootstrap_matrices = list(zip(*pc_results))[1]
 
     return bootstrap_matrices
 

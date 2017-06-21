@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 fileencoding=utf-8
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -19,7 +19,7 @@
 # MDAnalysis: A Toolkit for the Analysis of Molecular Dynamics Simulations.
 # J. Comput. Chem. 32 (2011), 2319--2327, doi:10.1002/jcc.21787
 #
-from __future__ import print_function
+from __future__ import print_function, division, absolute_import
 
 import MDAnalysis
 from MDAnalysis.analysis import polymer
@@ -97,7 +97,7 @@ class TestFitExponential(object):
     def setUp(self):
         self.x = np.linspace(0, 250, 251)
         self.a_ref = 20.0
-        self.y = np.exp(-self.x/self.a_ref)
+        self.y = np.exp(-self.x / self.a_ref)
 
     def tearDown(self):
         del self.x

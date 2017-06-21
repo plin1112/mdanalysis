@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -31,6 +31,7 @@ designed to store results from clustering algorithms.
 .. versionadded:: 0.16.0
 
 """
+from __future__ import absolute_import
 
 import numpy as np
 import six
@@ -182,7 +183,7 @@ class ClusterCollection(object):
             self.clusters = None
             return
 
-        if not len(set(map(type, elements))) == 1:
+        if not len(set((type(el) for el in elements))) == 1:
             raise TypeError("all the elements must have the same type")
         self.clusters = []
         elements_array = np.array(elements)

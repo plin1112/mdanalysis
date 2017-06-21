@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -24,6 +24,8 @@
 # See https://github.com/MDAnalysis/mdanalysis/issues/906
 
 # Remove this file in version 1.0
+
+from __future__ import absolute_import
 
 __all__ = ["mean_std_from_x3dnaPickle", "X3DNA", "X3DNAtraj"]
 

@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -152,6 +152,7 @@ Examples
 
 
 """
+from __future__ import division, absolute_import
 from six.moves import zip
 import numpy as np
 import warnings
@@ -276,7 +277,7 @@ class HydrogenBondAutoCorrel(object):
         # limit stop points using clip
         self._stops = np.clip(self._starts + req_frames, 0, n_frames)
 
-        self._skip = req_frames / self.nsamples
+        self._skip = req_frames // self.nsamples
         if self._skip == 0:  # If nsamples > req_frames
             warnings.warn("Desired number of sample points too high, using {0}"
                           .format(req_frames), RuntimeWarning)

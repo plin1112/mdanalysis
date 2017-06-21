@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 fileencoding=utf-8
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -55,6 +55,7 @@ Helper functions
 .. autofunction:: make_downshift_arrays
 
 """
+from __future__ import absolute_import
 
 from six.moves import zip
 import numpy as np
@@ -124,12 +125,12 @@ def make_downshift_arrays(upshift, nparents):
         counter += 1
         # If parent is skipped, eg (0, 0, 2, 2, etc)
         while counter != upshift[order[x:y][0]]:
-            downshift.append(np.array([], dtype=np.int))
+            downshift.append(np.array([], dtype=np.intp))
             counter += 1
-        downshift.append(np.sort(np.array(order[x:y], copy=True, dtype=np.int)))
+        downshift.append(np.sort(np.array(order[x:y], copy=True, dtype=np.intp)))
     # Add entries for childless parents at end of range
     while counter < (nparents - 1):
-        downshift.append(np.array([], dtype=np.int))
+        downshift.append(np.array([], dtype=np.intp))
         counter += 1
     # Add None to end of array to force it to be of type Object
     # Without this, a rectangular array gets squashed into a single array
@@ -150,8 +151,12 @@ class TransTable(object):
 
     Parameters
     ----------
-    n_atoms, n_residues, n_segments : int
-        number of atoms, residues, segments in topology
+    n_atoms : int
+        number of atoms in topology
+    n_residues : int
+        number of residues in topology
+    n_segments : int
+        number of segments in topology
     atom_resindex : 1-D array
         resindex for each atom in the topology; the number of unique values in
         this array must be <= `n_residues`, and the array must be length
@@ -164,8 +169,12 @@ class TransTable(object):
 
     Attributes
     ----------
-    n_atoms, n_residues, n_segments : int
-        number of atoms, residues, segments in topology
+    n_atoms : int
+        number of atoms in topology
+    n_residues : int
+        number of residues in topology
+    n_segments : int
+        number of segments in topology
     size
         tuple describing the shape of the TransTable
 
@@ -201,18 +210,18 @@ class TransTable(object):
 
         # built atom-to-residue mapping, and vice-versa
         if atom_resindex is None:
-            self._AR = np.zeros(n_atoms, dtype=np.int64)
+            self._AR = np.zeros(n_atoms, dtype=np.intp)
         else:
-            self._AR = atom_resindex.copy()
+            self._AR = np.asarray(atom_resindex, dtype=np.intp).copy()
             if not len(self._AR) == n_atoms:
                 raise ValueError("atom_resindex must be len n_atoms")
         self._RA = make_downshift_arrays(self._AR, n_residues)
 
         # built residue-to-segment mapping, and vice-versa
         if residue_segindex is None:
-            self._RS = np.zeros(n_residues, dtype=np.int64)
+            self._RS = np.zeros(n_residues, dtype=np.intp)
         else:
-            self._RS = residue_segindex.copy()
+            self._RS = np.asarray(residue_segindex, dtype=np.intp).copy()
             if not len(self._RS) == n_residues:
                 raise ValueError("residue_segindex must be len n_residues")
         self._SR = make_downshift_arrays(self._RS, n_segments)
@@ -427,24 +436,29 @@ class Topology(object):
     to residues, residues to segments, and vice-versa, are handled internally
     by this object.
 
-    Parameters
-    ----------
-    n_atoms, n_residues, n_segments : int
-        number of atoms, residues, segments in topology; there must be at least
-        1 element of each level in the system
-    attrs : TopologyAttr objects
-        components of the topology to be included
-    atom_resindex : array
-        1-D array giving the resindex of each atom in the system
-    residue_segindex : array
-        1-D array giving the segindex of each residue in the system
-
     """
 
     def __init__(self, n_atoms=1, n_res=1, n_seg=1,
                  attrs=None,
                  atom_resindex=None,
                  residue_segindex=None):
+        """
+        Parameters
+        ----------
+        n_atoms : int
+            number of atoms in topology. Must be larger then 1 at each level
+        n_residues : int
+            number of residues in topology. Must be larger then 1 at each level
+        n_segments : int
+            number of segments in topology. Must be larger then 1 at each level
+        attrs : TopologyAttr objects
+            components of the topology to be included
+        atom_resindex : array
+            1-D array giving the resindex of each atom in the system
+        residue_segindex : array
+            1-D array giving the segindex of each residue in the system
+
+        """
         self.tt = TransTable(n_atoms, n_res, n_seg,
                              atom_resindex=atom_resindex,
                              residue_segindex=residue_segindex)

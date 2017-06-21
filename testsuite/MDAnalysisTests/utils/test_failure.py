@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 fileencoding=utf-8
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -19,6 +19,7 @@
 # MDAnalysis: A Toolkit for the Analysis of Molecular Dynamics Simulations.
 # J. Comput. Chem. 32 (2011), 2319--2327, doi:10.1002/jcc.21787
 #
+from __future__ import absolute_import
 
 import os
 
@@ -29,4 +30,4 @@ def test_failure():
     # Have a file open to trigger an output from the open_files plugin.
     f = open('./failure.txt', 'w')
     if u'MDA_FAILURE_TEST' in os.environ:
-        assert False
+        raise AssertionError("the MDA_FAILURE_TEST environment variable is set")

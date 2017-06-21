@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -30,6 +30,7 @@ See Also
 MDAnalysis.coordinates.XTC: Read and write GROMACS XTC trajectory files.
 MDAnalysis.coordinates.XDR: BaseReader/Writer for XDR based formats
 """
+from __future__ import absolute_import
 
 from .XDR import XDRBaseReader, XDRBaseWriter
 from ..lib.formats.libmdaxdr import TRRFile
@@ -37,17 +38,21 @@ from ..lib.mdamath import triclinic_vectors, triclinic_box
 
 
 class TRRWriter(XDRBaseWriter):
-    """The Gromacs TRR trajectory format is a lossless format. The TRR format can
+    """Writer for the Gromacs TRR format.
+
+    The Gromacs TRR trajectory format is a lossless format. The TRR format can
     store *velocoties* and *forces* in addition to the coordinates. It is also
     used by other Gromacs tools to store and process other data such as modes
     from a principal component analysis.
 
-    If the data dictionary of a TimeStep contains the key 'lambda' the
-    corresponding value will be used as the lambda value for written TRR file.
-    If None is found the lambda is set to 0.
+    If the data dictionary of a :class:`Timestep` contains the key
+    'lambda' the corresponding value will be used as the lambda value
+    for written TRR file.  If ``None`` is found the lambda is set to 0.
+
     """
 
     format = 'TRR'
+    multiframe = True
     units = {'time': 'ps', 'length': 'nm', 'velocity': 'nm/ps',
              'force': 'kJ/(mol*nm)'}
     _file = TRRFile
@@ -57,7 +62,7 @@ class TRRWriter(XDRBaseWriter):
 
         Parameters
         ----------
-        ts : TimeStep
+        ts : :class:`~base.Timestep`
 
         See Also
         --------
@@ -99,12 +104,15 @@ class TRRWriter(XDRBaseWriter):
 
 
 class TRRReader(XDRBaseReader):
-    """The Gromacs TRR trajectory format is a lossless format. The TRR format can
+    """Reader for the Gromacs TRR format.
+
+    The Gromacs TRR trajectory format is a lossless format. The TRR format can
     store *velocoties* and *forces* in addition to the coordinates. It is also
     used by other Gromacs tools to store and process other data such as modes
     from a principal component analysis.
 
-    The lambda value is written in the data dictionary of the returned TimeStep
+    The lambda value is written in the data dictionary of the returned
+    :class:`Timestep`
 
     Notes
     -----

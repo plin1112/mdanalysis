@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -19,20 +19,21 @@
 # MDAnalysis: A Toolkit for the Analysis of Molecular Dynamics Simulations.
 # J. Comput. Chem. 32 (2011), 2319--2327, doi:10.1002/jcc.21787
 #
-"""
-Common functions for topology building --- :mod:`MDAnalysis.topology.core`
+"""Common functions for topology building --- :mod:`MDAnalysis.topology.core`
 ==========================================================================
 
 The various topology parsers make use of functions and classes in this
 module. They are mostly of use to developers.
 
-.. SeeAlso:: :mod:`MDAnalysis.topology.tables` for some hard-coded atom
-   information that is used by functions such as :func:`guess_atom_type` and
-   :func:`guess_atom_mass`.
+See Also
+--------
+:mod:`MDAnalysis.topology.tables`
+  for some hard-coded atom information that is used by functions such as
+  :func:`guess_atom_type` and :func:`guess_atom_mass`.
 
 """
 
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 import six
 
 # Global imports

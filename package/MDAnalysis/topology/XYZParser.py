@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -39,12 +39,12 @@ Classes
 """
 from __future__ import absolute_import
 
-import numpy as np
 from six.moves import range
+import numpy as np
 
 from . import guessers
 from ..lib.util import openany
-from .base import TopologyReader
+from .base import TopologyReaderBase
 from ..core.topology import Topology
 from ..core.topologyattrs import (
     Atomnames,
@@ -57,7 +57,7 @@ from ..core.topologyattrs import (
 )
 
 
-class XYZParser(TopologyReader):
+class XYZParser(TopologyReaderBase):
     """Parse a list of atoms from an XYZ file.
 
     Creates the following attributes:

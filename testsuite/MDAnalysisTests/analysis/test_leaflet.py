@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 fileencoding=utf-8
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -19,10 +19,11 @@
 # MDAnalysis: A Toolkit for the Analysis of Molecular Dynamics Simulations.
 # J. Comput. Chem. 32 (2011), 2319--2327, doi:10.1002/jcc.21787
 #
+from __future__ import  absolute_import
 import MDAnalysis
 from MDAnalysisTests import module_not_found
 
-from numpy.testing import TestCase, assert_equal, dec
+from numpy.testing import TestCase, assert_equal, assert_almost_equal, dec
 import numpy as np
 
 from MDAnalysisTests.datafiles import Martini_membrane_gro
@@ -37,6 +38,7 @@ class TestLeafletFinder(TestCase):
 
     def tearDown(self):
         del self.universe
+        del self.lipid_heads
         del self.lipid_head_string
 
     def test_leaflet_finder(self):
@@ -58,3 +60,10 @@ class TestLeafletFinder(TestCase):
         groups_string = lfls_string.groups()
         assert_equal(groups_string[0].indices, groups_ag[0].indices)
         assert_equal(groups_string[1].indices, groups_ag[1].indices)
+
+    def test_optimize_cutoff(self):
+        from MDAnalysis.analysis.leaflet import optimize_cutoff
+        cutoff, N = optimize_cutoff(self.universe, self.lipid_heads, pbc=True)
+        assert_equal(N, 2)
+        assert_almost_equal(cutoff, 10.5, decimal=4)
+

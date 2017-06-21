@@ -3,7 +3,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 fileencoding=utf-8
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -75,7 +75,7 @@ except ImportError:
     cmdclass = {}
 
 # NOTE: keep in sync with MDAnalysis.__version__ in version.py
-RELEASE = "0.16.0-dev0"
+RELEASE = "0.16.2-dev0"
 
 is_release = 'dev' not in RELEASE
 
@@ -189,15 +189,11 @@ def get_numpy_include():
         import numpy as np
     except ImportError:
         print('*** package "numpy" not found ***')
-        print('MDAnalysis requires a version of NumPy (>=1.5.0), even for setup.')
+        print('MDAnalysis requires a version of NumPy (>=1.10.4), even for setup.')
         print('Please get it from http://numpy.scipy.org/ or install it through '
               'your package manager.')
         sys.exit(-1)
-    try:
-        numpy_include = np.get_include()
-    except AttributeError:
-        numpy_include = np.get_numpy_include()
-    return numpy_include
+    return np.get_include()
 
 
 def hasfunction(cc, funcname, include=None, extra_postargs=None):
@@ -497,15 +493,15 @@ if __name__ == '__main__':
           ext_modules=exts,
           classifiers=CLASSIFIERS,
           cmdclass=cmdclass,
-          requires=['numpy (>=1.5.0)', 'biopython', 'mmtf (>=1.0.0)',
+          requires=['numpy (>=1.10.4)', 'biopython', 'mmtf (>=1.0.0)',
                     'networkx (>=1.0)', 'GridDataFormats (>=0.3.2)', 'joblib'],
           # all standard requirements are available through PyPi and
           # typically can be installed without difficulties through setuptools
           setup_requires=[
-              'numpy>=1.5.0',
+              'numpy>=1.9.3',
           ],
           install_requires=[
-              'numpy>=1.5.0',
+              'numpy>=1.10.4',
               'biopython>=1.59',
               'networkx>=1.0',
               'GridDataFormats>=0.3.2',

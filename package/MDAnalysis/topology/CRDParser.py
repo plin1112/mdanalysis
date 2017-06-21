@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -49,7 +49,7 @@ from __future__ import absolute_import
 import numpy as np
 
 from ..lib.util import openany, FORTRANReader
-from .base import TopologyReader, change_squash
+from .base import TopologyReaderBase, change_squash
 from . import guessers
 from ..core.topology import Topology
 from ..core.topologyattrs import (
@@ -65,7 +65,7 @@ from ..core.topologyattrs import (
 )
 
 
-class CRDParser(TopologyReader):
+class CRDParser(TopologyReaderBase):
     """Parse a CHARMM CARD coordinate file for topology information.
 
     Reads the following Attributes:

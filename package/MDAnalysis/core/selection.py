@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -37,6 +37,7 @@ This is all invisible to the user through the
 :class:`~MDAnalysis.core.groups.AtomGroup`.
 
 """
+from __future__ import division, absolute_import
 import six
 from six.moves import zip
 
@@ -763,7 +764,7 @@ class RangeSelection(Selection):
                 if not selrange:
                     raise ValueError(
                         "Failed to parse number: {0}".format(val))
-                lower, upper = map(int, selrange.groups())
+                lower, upper = np.int64(selrange.groups())
 
             lowers.append(lower)
             uppers.append(upper)
@@ -821,7 +822,9 @@ class ProteinSelection(Selection):
 
       * still missing: Amber N- and C-terminal residue names
 
-    .. SeeAlso:: :func:`MDAnalysis.lib.util.convert_aa_code`
+    See Also
+    --------
+    :func:`MDAnalysis.lib.util.convert_aa_code`
     """
     token = 'protein'
 

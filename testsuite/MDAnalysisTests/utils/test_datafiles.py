@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 fileencoding=utf-8
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -19,6 +19,7 @@
 # MDAnalysis: A Toolkit for the Analysis of Molecular Dynamics Simulations.
 # J. Comput. Chem. 32 (2011), 2319--2327, doi:10.1002/jcc.21787
 #
+from __future__ import absolute_import
 
 from numpy.testing import assert_array_equal
 
@@ -33,7 +34,7 @@ class TestDatafiles(object):
     def test_all_exports(self):
         import MDAnalysisTests.datafiles
         missing = [name for name in dir(MDAnalysisTests.datafiles)
-                   if not name.startswith('_') and name not in MDAnalysisTests.datafiles.__all__]
+                   if not name.startswith('_') and name not in MDAnalysisTests.datafiles.__all__ and name != 'absolute_import']
         assert_array_equal(missing, [], err_msg="Variables need to be added to __all__.")
 
     def test_export_variables(self):

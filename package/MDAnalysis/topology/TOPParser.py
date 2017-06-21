@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -70,15 +70,15 @@ Classes
 """
 from __future__ import absolute_import, division
 
-import numpy as np
 from six.moves import range, zip
+import numpy as np
 import functools
 from math import ceil
 
 from . import guessers
 from .tables import NUMBER_TO_ELEMENT
 from ..lib.util import openany, FORTRANReader
-from .base import TopologyReader
+from .base import TopologyReaderBase
 from ..core.topology import Topology
 from ..core.topologyattrs import (
     Atomnames,
@@ -102,7 +102,7 @@ class TypeIndices(AtomAttr):
     level = 'atom'
 
 
-class TOPParser(TopologyReader):
+class TOPParser(TopologyReaderBase):
     """Reads topology information from an AMBER top file.
 
     Reads the following Attributes if in topology:
@@ -182,7 +182,9 @@ class TOPParser(TopologyReader):
                     next_getter = self.skipper
                 else:
                     num = sys_info[sect_num]
-                    numlines = (num // per_line) + 1
+                    numlines = (num // per_line)
+                    if num % per_line != 0:
+                        numlines += 1
 
                     attrs[name] = func(atoms_per, numlines)
 
@@ -287,7 +289,7 @@ class TOPParser(TopologyReader):
         for i in range(numlines):
             l = self.topfile.next()
             # Subtract 1 from each number to ensure zero-indexing for the atoms
-            fields = map(lambda x: int(x) - 1, l.split())
+            fields = np.int64(l.split()) - 1
             for j in range(0, len(fields), atoms_per):
                 section.append(tuple(fields[j:j+atoms_per]))
         return section

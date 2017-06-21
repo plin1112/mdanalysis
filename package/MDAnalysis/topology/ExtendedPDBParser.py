@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -37,11 +37,12 @@ reads residue numbers up to 99,999 correctly. If you have systems containing at
 least 100,000 residues then you need to use a different file format that can
 handle such residue numbers.
 
-.. SeeAlso::
+See Also
+--------
+* :mod:`MDAnalysis.topology.PDBParser`
+* :class:`MDAnalysis.coordinates.PDB.ExtendedPDBReader`
+* :class:`MDAnalysis.core.universe.Universe`
 
-   * :mod:`MDAnalysis.topology.PDBParser`
-   * :class:`MDAnalysis.coordinates.PDB.ExtendedPDBReader`
-   * :class:`MDAnalysis.core.universe.Universe`
 
 Classes
 -------
@@ -74,7 +75,9 @@ class ExtendedPDBParser(PDBParser.PDBParser):
      - resnames
      - segids
 
-    .. SeeAlso:: :class:`MDAnalysis.coordinates.PDB.ExtendedPDBReader`
+    See Also
+    --------
+    :class:`MDAnalysis.coordinates.PDB.ExtendedPDBReader`
 
     .. versionadded:: 0.8
     """

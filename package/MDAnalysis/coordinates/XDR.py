@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -32,6 +32,7 @@ MDAnalysis.coordinates.XTC: Read and write GROMACS XTC trajectory files.
 MDAnalysis.coordinates.TRR: Read and write GROMACS TRR trajectory files.
 MDAnalysis.lib.formats.libmdaxdr: Low level xdr format reader
 """
+from __future__ import absolute_import
 import six
 
 import errno
@@ -83,7 +84,7 @@ def read_numpy_offsets(filename):
     return {k: v for k, v in six.iteritems(np.load(filename))}
 
 
-class XDRBaseReader(base.Reader):
+class XDRBaseReader(base.ReaderBase):
     """Base class for libmdaxdr file formats xtc and trr
 
     This class handles integration of XDR based formats into MDAnalysis. The
@@ -111,7 +112,8 @@ class XDRBaseReader(base.Reader):
     """
     def __init__(self, filename, convert_units=True, sub=None,
                  refresh_offsets=False, **kwargs):
-        """Parameters
+        """
+        Parameters
         ----------
         filename : str
             trajectory filename
@@ -248,7 +250,7 @@ class XDRBaseReader(base.Reader):
         return self._writer(filename, n_atoms=n_atoms, **kwargs)
 
 
-class XDRBaseWriter(base.Writer):
+class XDRBaseWriter(base.WriterBase):
     """Base class for libmdaxdr file formats xtc and trr"""
 
     def __init__(self, filename, n_atoms, convert_units=True, **kwargs):

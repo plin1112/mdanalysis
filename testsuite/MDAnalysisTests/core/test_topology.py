@@ -3,7 +3,7 @@
 Should convert between indices (*ix)
 Should work with both a single or an array of indices
 """
-import six
+from __future__ import absolute_import
 from six.moves import zip
 import itertools
 
@@ -476,12 +476,12 @@ class TestDownshiftArrays(object):
     def test_downshift_dtype_square(self):
         out = make_downshift_arrays(self.square, self.square_size)
         assert_(out.dtype == object)
-        assert_(out[0].dtype == np.int64)
+        assert_(out[0].dtype == np.intp)
 
     def test_downshift_dtype_ragged(self):
         out = make_downshift_arrays(self.ragged, self.ragged_size)
         assert_(out.dtype == object)
-        assert_(out[0].dtype == np.int64)
+        assert_(out[0].dtype == np.intp)
 
     # Check shape and size
     # Shape should be size N+1 as None is appended

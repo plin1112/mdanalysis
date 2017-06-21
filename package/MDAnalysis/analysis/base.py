@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -27,13 +27,13 @@ A collection of useful building blocks for creating Analysis
 classes.
 
 """
+from __future__ import absolute_import
+import six
 from six.moves import range, zip
-
 import inspect
 import logging
-import numpy as np
-import six
 
+import numpy as np
 from MDAnalysis import coordinates
 from MDAnalysis.core.groups import AtomGroup
 from MDAnalysis.lib.log import ProgressMeter, _set_verbose
@@ -222,8 +222,8 @@ class AnalysisFromFunction(AnalysisBase):
 
         """
         if (trajectory is not None) and (not isinstance(
-                trajectory, coordinates.base.Reader)):
-            args = args + (trajectory, )
+                trajectory, coordinates.base.ProtoReader)):
+            args = args + (trajectory,)
             trajectory = None
 
         if trajectory is None:

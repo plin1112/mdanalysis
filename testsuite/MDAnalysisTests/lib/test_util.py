@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 fileencoding=utf-8
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -19,6 +19,10 @@
 # MDAnalysis: A Toolkit for the Analysis of Molecular Dynamics Simulations.
 # J. Comput. Chem. 32 (2011), 2319--2327, doi:10.1002/jcc.21787
 #
+from __future__ import absolute_import, division
+
+from unittest import TestCase
+
 from six.moves import range, StringIO
 import six
 
@@ -122,7 +126,7 @@ class TestIterable(object):
         assert_equal(util.iterable(u"unicode string"), False)
 
 
-class TestFilename(object):
+class TestFilename(TestCase):
     def setUp(self):
         self.root = "foo"
         self.filename = "foo.psf"
@@ -159,7 +163,7 @@ class TestFilename(object):
         assert_equal(ns.name, self.filename2)
 
 
-class TestGeometryFunctions(object):
+class TestGeometryFunctions(TestCase):
     def setUp(self):
         self.e1 = np.array([1., 0, 0])
         self.e2 = np.array([0, 1., 0])
@@ -228,7 +232,7 @@ class TestGeometryFunctions(object):
         cd = bc + self.e3
         assert_almost_equal(mdamath.dihedral(ab, bc, cd), -np.pi / 2)
 
-class TestMakeWhole(object):
+class TestMakeWhole(TestCase):
     """Set up a simple system:
 
     +-----------+
@@ -440,7 +444,7 @@ class Class_with_Caches(object):
         self._cache[name] = value
 
 
-class TestCachedDecorator(object):
+class TestCachedDecorator(TestCase):
     def setUp(self):
         self.obj = Class_with_Caches()
 
@@ -533,11 +537,11 @@ class TestConvFloat(object):
         assert_equal(util.conv_float('a.b'), 'a.b')
 
     def test_map_1(self):
-        ret = list(map(util.conv_float, ['0.45', '0.56', '6.7']))
+        ret = [util.conv_float(el) for el in ('0.45', '0.56', '6.7')]
         assert_equal(ret, [0.45, 0.56, 6.7])
 
     def test_map_2(self):
-        ret = list(map(util.conv_float, ['0.45', 'a.b', '!!']))
+        ret = [util.conv_float(el) for el in ('0.45', 'a.b', '!!')]
         assert_equal(ret, [0.45, 'a.b', '!!'])
 
 class TestFixedwidthBins(object):
@@ -623,13 +627,13 @@ class TestGuessFormat(object):
     def _check_compressed(self, f, fn):
         """Check that format suffixed by compressed extension works"""
         a = util.format_from_filename_extension(fn)
-
-        assert_equal(a, f)
+        # expect answer to always be uppercase
+        assert_equal(a, f.upper())
 
     def _check_guess_format(self, f, fn):
         a = util.guess_format(fn)
-
-        assert_equal(a, f)
+        # expect answer to always be uppercase
+        assert_equal(a, f.upper())
 
     def _check_get_parser(self, fn, P):
         a = mda.topology.core.get_parser_for(fn)
@@ -651,18 +655,20 @@ class TestGuessFormat(object):
         # f - format extension
         # P - parser class or None
         # R - reader class or None
-        for f, P, R in self.formats:
-            fn = 'file.{0}'.format(f)
-            # check f doesn't trip up get_ext or guess_format
-            yield self._check_get_ext, f, fn
-            yield self._check_guess_format, f, fn
+        for form, P, R in self.formats:
+            # should work with either lower or upper case extension
+            for f in [form.upper(), form.lower()]:
+                fn = 'file.{0}'.format(f)
+                # check f doesn't trip up get_ext or guess_format
+                yield self._check_get_ext, f, fn
+                yield self._check_guess_format, f, fn
 
-            # check adding extension to f
-            # also checks f without extension
-            yield self._check_compressed, f, fn
-            for e in self.compressed_extensions:
-                yield self._check_compressed, f, fn + e
-                yield self._check_guess_format, f, fn + e
+                # check adding extension to f
+                # also checks f without extension
+                yield self._check_compressed, f, fn
+                for e in self.compressed_extensions:
+                    yield self._check_compressed, f, fn + e
+                    yield self._check_guess_format, f, fn + e
 
             # Check that expected parser is returned
             if P is not None:
@@ -691,6 +697,11 @@ class TestGuessFormat(object):
         s = StringIO('this is a very fun file')
 
         assert_raises(ValueError, util.guess_format, s)
+
+    def test_from_ndarray(self):
+        fn = np.zeros((3, 3))
+        rd = mda.coordinates.core.get_reader_for(fn)
+        assert_equal(rd, mda.coordinates.memory.MemoryReader)
 
 
 class TestUniqueRows(object):
@@ -767,6 +778,71 @@ class TestGetWriterFor(object):
         assert_raises(ValueError, mda.coordinates.core.get_writer_for,
                       filename='this.gro', multiframe='sandwich')
 
+    @staticmethod
+    def _check_singleframe(fmt, cls):
+        assert_equal(mda.coordinates.core.get_writer_for('this', format=fmt, multiframe=False),
+                     cls)
+
+    @staticmethod
+    def _check_singleframe_fails(fmt):
+        assert_raises(TypeError,
+                      mda.coordinates.core.get_writer_for,
+                      'this', format=fmt, multiframe=False)
+
+    @staticmethod
+    def _check_multiframe(fmt, cls):
+        assert_equal(mda.coordinates.core.get_writer_for('this', format=fmt, multiframe=True),
+                     cls)
+
+    @staticmethod
+    def _check_multiframe_fails(fmt):
+        assert_raises(TypeError,
+                      mda.coordinates.core.get_writer_for,
+                      'this', format=fmt, multiframe=True)
+
+    formats = [
+        # format name, related class, singleframe, multiframe
+        ('CRD', mda.coordinates.CRD.CRDWriter, True, False),
+        #('ENT', mda.coordinates.PDB.PDBWriter, True, False),
+        ('GRO', mda.coordinates.GRO.GROWriter, True, False),
+        ('MOL2', mda.coordinates.MOL2.MOL2Writer, True, True),
+        ('NCDF', mda.coordinates.TRJ.NCDFWriter, True, True),
+        ('NULL', mda.coordinates.null.NullWriter, True, True),
+        # ('PDB', mda.coordinates.PDB.PDBWriter, True, True), special case, done separately
+        ('PDBQT', mda.coordinates.PDBQT.PDBQTWriter, True, False),
+        ('PQR', mda.coordinates.PQR.PQRWriter, True, False),
+        ('TRR', mda.coordinates.TRR.TRRWriter, True, True),
+        ('XTC', mda.coordinates.XTC.XTCWriter, True, True),
+        ('XYZ', mda.coordinates.XYZ.XYZWriter, True, True),
+    ]
+    if six.PY2:
+        formats += [
+        ('DATA', mda.coordinates.LAMMPS.DATAWriter, True, False),
+        ('DCD', mda.coordinates.DCD.DCDWriter, True, True),
+        ('LAMMPS', mda.coordinates.LAMMPS.DCDWriter, True, True),
+        ('TRZ', mda.coordinates.TRZ.TRZWriter, True, True),
+    ]
+    def test_get_writer_for(self):
+        for fmt, cls, singleframe, multiframe in self.formats:
+            for f in [fmt.upper(), fmt.lower()]:
+                if singleframe:
+                    yield self._check_singleframe, f, cls
+                else:
+                    yield self._check_singleframe_fails, f
+                if multiframe:
+                    yield self._check_multiframe, f, cls
+                else:
+                    yield self._check_multiframe_fails, f
+
+    def test_get_writer_for_pdb(self):
+        assert_equal(mda.coordinates.core.get_writer_for('this', format='PDB', multiframe=False),
+                     mda.coordinates.PDB.PDBWriter)
+        assert_equal(mda.coordinates.core.get_writer_for('this', format='PDB', multiframe=True),
+                     mda.coordinates.PDB.MultiPDBWriter)
+        assert_equal(mda.coordinates.core.get_writer_for('this', format='ENT', multiframe=False),
+                     mda.coordinates.PDB.PDBWriter)
+        assert_equal(mda.coordinates.core.get_writer_for('this', format='ENT', multiframe=True),
+                     mda.coordinates.PDB.MultiPDBWriter)
 
 class TestBlocksOf(object):
     def test_blocks_of_1(self):
@@ -821,7 +897,7 @@ class TestBlocksOf(object):
         assert_raises(ValueError, util.blocks_of, arr, 2, 1)
 
 
-class TestNamespace(object):
+class TestNamespace(TestCase):
     def setUp(self):
         self.ns = util.Namespace()
 
@@ -896,3 +972,19 @@ class TestNamespace(object):
             seen.append(val)
         for val in ['this', 'that', 'other']:
             assert_(val in seen)
+
+
+class TestTruncateInteger(object):
+    @staticmethod
+    def _check_vals(a, b):
+        assert_(util.ltruncate_int(*a) == b)
+
+    def test_ltruncate_int(self):
+        for vals, exp in (
+                ((1234, 1), 4),
+                ((1234, 2), 34),
+                ((1234, 3), 234),
+                ((1234, 4), 1234),
+                ((1234, 5), 1234),
+        ):
+            yield self._check_vals, vals, exp

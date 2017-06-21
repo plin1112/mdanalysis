@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -52,7 +52,7 @@ import numpy as np
 
 from . import guessers
 from ..lib.util import openany
-from .base import TopologyReader
+from .base import TopologyReaderBase
 from ..core.topology import Topology
 from ..core.topologyattrs import (
     Atomtypes,
@@ -70,7 +70,7 @@ from ..core.topologyattrs import (
 )
 
 
-class HoomdXMLParser(TopologyReader):
+class HoomdXMLParser(TopologyReaderBase):
     """Parses a Hoomd XML file to create a Topology
 
     Reads the following Attributes:
@@ -122,7 +122,7 @@ class HoomdXMLParser(TopologyReader):
         ):
             try:
                 val = configuration.find(attrname)
-                vals = map(mapper, val.text.strip().split())
+                vals = [mapper(el) for el in val.text.strip().split()]
             except:
                 pass
             else:
@@ -136,7 +136,7 @@ class HoomdXMLParser(TopologyReader):
         ):
             try:
                 val = configuration.find(attrname)
-                vals = [tuple(map(int, line.split()[1:]))
+                vals = [(int(el) for el in line.split()[1:])
                         for line in val.text.strip().split('\n')
                         if line.strip()]
             except:

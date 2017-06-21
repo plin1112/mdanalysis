@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 fileencoding=utf-8
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -19,6 +19,7 @@
 # MDAnalysis: A Toolkit for the Analysis of Molecular Dynamics Simulations.
 # J. Comput. Chem. 32 (2011), 2319--2327, doi:10.1002/jcc.21787
 #
+from __future__ import absolute_import
 from numpy.testing import (
     assert_,
     assert_array_equal,
@@ -36,6 +37,7 @@ from MDAnalysisTests.datafiles import (
     PDB_conect2TER,
     PDB_singleconect,
     PDB_chainidnewres,
+    PDB_sameresid_diffresname
 )
 from MDAnalysis.topology.PDBParser import PDBParser
 
@@ -142,3 +144,12 @@ def test_new_chainid_new_res():
     assert_(len(u.segments[1].atoms) == 5)
     assert_(len(u.segments[2].atoms) == 5)
     assert_(len(u.segments[3].atoms) == 7)
+
+def test_sameresid_diffresname():
+    with _PDBPARSER(PDB_sameresid_diffresname) as p:
+        top = p.parse()
+    resids = [9, 9]
+    resnames = ['GLN', 'POPC']
+    for i, (resid, resname) in enumerate(zip(resids, resnames)):
+        assert_(top.resids.values[i] == resid)
+        assert_(top.resnames.values[i] == resname)

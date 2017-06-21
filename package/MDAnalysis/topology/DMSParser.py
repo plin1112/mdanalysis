@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -46,7 +46,7 @@ import sqlite3
 import os
 
 from . import guessers
-from .base import TopologyReader, squash_by
+from .base import TopologyReaderBase, squash_by
 from ..core.topology import Topology
 from ..core.topologyattrs import (
     Atomids,
@@ -70,7 +70,7 @@ class Atomnums(AtomAttr):
     singular = 'atomnum'
 
 
-class DMSParser(TopologyReader):
+class DMSParser(TopologyReaderBase):
     """Read a topology from a DESRES_ Molecular Structure file.
 
     Format (DMS_) coordinate files (as used by the Desmond_ MD package).

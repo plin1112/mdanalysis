@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -30,6 +30,7 @@ See Also
 MDAnalysis.coordinates.TRR: Read and write GROMACS TRR trajectory files.
 MDAnalysis.coordinates.XDR: BaseReader/Writer for XDR based formats
 """
+from __future__ import absolute_import
 
 from .XDR import XDRBaseReader, XDRBaseWriter
 from ..lib.formats.libmdaxdr import XTCFile
@@ -37,19 +38,23 @@ from ..lib.mdamath import triclinic_vectors, triclinic_box
 
 
 class XTCWriter(XDRBaseWriter):
-    """XTC is a compressed trajectory format from Gromacs. The trajectory is saved
+    """Writer for the Gromacs XTC trajectory format.
+
+    XTC is a compressed trajectory format from Gromacs. The trajectory is saved
     with reduced precision (3 decimal places by default) compared to other
     lossless formarts like TRR and DCD. The main advantage of XTC files is that
     they require significantly less disk space and the loss of precision is
     usually not a problem.
     """
     format = 'XTC'
+    multiframe = True
     units = {'time': 'ps', 'length': 'nm'}
     _file = XTCFile
 
     def __init__(self, filename, n_atoms, convert_units=True,
                  precision=3, **kwargs):
-        """Parameters
+        """
+        Parameters
         ----------
         filename : str
             filename of the trajectory
@@ -69,7 +74,7 @@ class XTCWriter(XDRBaseWriter):
 
         Parameters
         ----------
-        ts: TimeStep
+        ts : :class:`~base.Timestep`
 
         See Also
         --------
@@ -94,7 +99,9 @@ class XTCWriter(XDRBaseWriter):
 
 
 class XTCReader(XDRBaseReader):
-    """XTC is a compressed trajectory format from Gromacs. The trajectory is saved
+    """Reader for the Gromacs XTC trajectory format.
+
+    XTC is a compressed trajectory format from Gromacs. The trajectory is saved
     with reduced precision (3 decimal places) compared to other lossless
     formarts like TRR and DCD. The main advantage of XTC files is that they
     require significantly less disk space and the loss of precision is usually

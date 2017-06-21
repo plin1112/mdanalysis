@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -30,11 +30,12 @@ file and :exc:`ValueError` upon failing to make sense of the read data.
 Classes
 -------
 
-.. autoclass:: TopologyReader
+.. autoclass:: TopologyReaderBase
    :members:
    :inherited-members:
 
 """
+from __future__ import absolute_import
 import six
 from six.moves import zip
 # While reduce is a built-in in python 2, it is not in python 3
@@ -45,7 +46,7 @@ import numpy as np
 import warnings
 
 from .. import _PARSERS
-from ..coordinates.base import IObase
+from ..coordinates.base import IOBase
 from ..lib import util
 
 
@@ -62,7 +63,7 @@ class _Topologymeta(type):
                 _PARSERS[f] = cls
 
 
-class TopologyReader(six.with_metaclass(_Topologymeta, IObase)):
+class TopologyReaderBase(six.with_metaclass(_Topologymeta, IOBase)):
     """Base class for topology readers
 
     Parameters

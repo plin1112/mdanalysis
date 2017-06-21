@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -63,6 +63,7 @@ Functions
 .. autofunction:: transform_StoR(coordinates, box [,backend])
 
 """
+from __future__ import division, absolute_import
 from six.moves import range
 
 import numpy as np
@@ -359,7 +360,7 @@ def self_distance_array(reference, box=None, result=None, backend="serial"):
             box = triclinic_vectors(triclinic_box(box[0], box[1], box[2]))
 
     refnum = ref.shape[0]
-    distnum = refnum * (refnum - 1) / 2
+    distnum = refnum * (refnum - 1) // 2
 
     if result is not None:
         _check_results_array(result, (distnum,))
@@ -770,12 +771,6 @@ def calc_dihedrals(coords1, coords2, coords3, coords4, box=None, result=None,
     return angles
 
 
-calc_torsions = deprecate(calc_dihedrals,
-                          old_name='calc_torsions',
-                          new_name='calc_dihedrals',
-                          message="This will be removed in v0.15.0")
-
-
 def apply_PBC(incoords, box, backend="serial"):
     """Moves a set of coordinates to all be within the primary unit cell
 
@@ -837,9 +832,3 @@ def apply_PBC(incoords, box, backend="serial"):
                backend=backend)
 
     return coords
-
-
-applyPBC = deprecate(apply_PBC,
-                     old_name='applyPBC',
-                     new_name='apply_PBC',
-                     message="This will be removed in v0.15.0")

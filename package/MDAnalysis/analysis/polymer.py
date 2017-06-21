@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -32,6 +32,7 @@ Polymer analysis --- :mod:`MDAnalysis.analysis.polymer`
 This module contains various commonly used tools in analysing polymers.
 
 """
+from __future__ import division, absolute_import
 from six.moves import range
 
 import numpy as np

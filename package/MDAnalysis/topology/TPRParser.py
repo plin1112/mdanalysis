@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -92,7 +92,10 @@ Classes
    :members:
    :inherited-members:
 
-.. SeeAlso:: :mod:`MDAnalysis.topology.tpr`
+See Also
+--------
+:mod:`MDAnalysis.topology.tpr`
+
 
 Development notes
 -----------------
@@ -144,15 +147,15 @@ import xdrlib
 from . import guessers
 from ..lib.util import anyopen
 from .tpr import utils as tpr_utils
-from .base import TopologyReader
+from .base import TopologyReaderBase
 from ..core.topologyattrs import Resnums
 
 import logging
 logger = logging.getLogger("MDAnalysis.topology.TPRparser")
 
 
-class TPRParser(TopologyReader):
-    """Read topology information from a Gromacs_ TPR_ file.
+class TPRParser(TopologyReaderBase):
+    """Read topology information from a Gromacs_ `TPR file`_.
 
     .. _Gromacs: http://www.gromacs.org
     .. _TPR file: http://manual.gromacs.org/current/online/tpr.html
@@ -199,7 +202,7 @@ class TPRParser(TopologyReader):
             raise IOError(msg)
 
         tpr_top.add_TopologyAttr(Resnums(tpr_top.resids.values.copy()))
-        
+
         return tpr_top
 
     # THE FOLLOWING CODE IS WORKING FOR TPX VERSION 58, BUT SINCE THESE INFO IS

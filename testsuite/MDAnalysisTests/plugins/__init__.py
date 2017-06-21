@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 fileencoding=utf-8
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -61,6 +61,7 @@ happen only at test runtime. See Issue 344 for details.
 .. _API specification:
    http://nose.readthedocs.org/en/latest/plugins/interface.html
 """
+from __future__ import absolute_import
 
 # Do NOT import MDAnalysis at this level. Tests should do it themselves.
 # If MDAnalysis is imported here coverage accounting might fail because all the import

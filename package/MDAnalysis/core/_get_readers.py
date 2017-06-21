@@ -19,11 +19,13 @@ coordinates/core (all others).  They are declared here to avoid
 circular imports.
 
 """
+from __future__ import absolute_import
 
+import copy
 import inspect
 import mmtf
 import numpy as np
-
+from MDAnalysis.lib.util import isstream
 
 from .. import _READERS, _PARSERS, _MULTIFRAME_WRITERS, _SINGLEFRAME_WRITERS
 from ..lib import util
@@ -37,7 +39,7 @@ def get_reader_for(filename, format=None):
     filename
         filename of the input trajectory or coordinate file.  Also can
         handle a few special cases, see notes below.
-    format
+    format : str or :class:`Reader` (optional)
         Define the desired format.  Can be a string to request a given
         Reader.
         If a class is passed, it will be assumed that this is
@@ -45,7 +47,8 @@ def get_reader_for(filename, format=None):
 
     Returns
     -------
-    A Reader object
+    :class:`Reader`
+        A Reader object
 
 
     Raises
@@ -57,20 +60,26 @@ def get_reader_for(filename, format=None):
     Notes
     -----
     There are a number of special cases that can be handled:
-      If `filename` is a numpy array, MemoryReader is returned.
-      If `filename` is an MMTF object, MMTFReader is returned.
-      If `filename` is an iterable of filenames, ChainReader is returned.
 
-    Automatic detection is disabled when an explicit `format` is
-    provided, unless a list of filenames is given, in which case
-    ChainReader is returned and `format` passed to the ChainReader.
+    - If `filename` is a numpy array,
+      :class:`~MDAnalysis.coordinates.memory.MemoryReader` is returned.
+    - If `filename` is an MMTF object,
+      :class:`~MDAnalysis.coordinates.MMTF.MMTFReader` is returned.
+    - If `filename` is an iterable of filenames,
+      :class:`~MDAnalysis.coordinates.chain.ChainReader` is returned.
+
+    Automatic detection is disabled when an explicit `format` is provided,
+    unless a list of filenames is given, in which case
+    :class:`~MDAnalysis.coordinates.chain.ChainReader` is returned and `format`
+    passed to the :class:`~MDAnalysis.coordinates.chain.ChainReader`.
+
     """
     # check if format is actually a Reader
     if inspect.isclass(format):
         return format
 
     # ChainReader gets returned even if format is specified
-    if not isinstance(filename, np.ndarray) and util.iterable(filename):
+    if not isinstance(filename, np.ndarray) and util.iterable(filename) and not isstream(filename):
         format = 'CHAIN'
     # Only guess if format is not specified
     elif format is None:
@@ -103,7 +112,7 @@ def get_writer_for(filename, format=None, multiframe=None):
     """Return an appropriate trajectory or frame writer class for `filename`.
 
     The format is determined by the `format` argument or the extension of
-    `filename`. If `format` is provided, it takes precedence over The
+    `filename`. If `format` is provided, it takes precedence over the
     extension of `filename`.
 
     Parameters
@@ -111,18 +120,20 @@ def get_writer_for(filename, format=None, multiframe=None):
     filename : str or ``None``
         If no *format* is supplied, then the filename for the trajectory is
         examined for its extension and the Writer is chosen accordingly.
-        If ``None`` is provided, the
-        :class:`~MDAnalysis.coordinates.null.NullWriter` is selected.
-    format : str, optional
+        If ``None`` is provided, then
+        :class:`~MDAnalysis.coordinates.null.NullWriter` is selected (and
+        all output is discarded silently).
+    format : str (optional)
         Explicitly set a format.
-    multiframe : bool, optional
+    multiframe : bool (optional)
         ``True``: write multiple frames to the trajectory; ``False``: only
         write a single coordinate frame; ``None``: first try trajectory (multi
         frame writers), then the single frame ones. Default is ``None``.
 
     Returns
     -------
-    A Writer object
+    :class:`Writer`
+        A Writer object
 
     Raises
     ------
@@ -159,34 +170,27 @@ def get_writer_for(filename, format=None, multiframe=None):
                              .format(filename))
         else:
             format = util.check_compressed_format(root, ext)
-
+    format = format.upper()
     if multiframe is None:
-        try:
-            return _MULTIFRAME_WRITERS[format]
-        except KeyError:
-            try:
-                return _SINGLEFRAME_WRITERS[format]
-            except KeyError:
-                raise TypeError(
-                    "No trajectory or frame writer for format '{0}'"
-                    .format(format))
+        # Multiframe takes priority, else use singleframe
+        options = copy.copy(_SINGLEFRAME_WRITERS)  # do copy to avoid changing in place
+        options.update(_MULTIFRAME_WRITERS)  # update overwrites existing entries
+        errmsg = "No trajectory or frame writer for format '{0}'"
     elif multiframe is True:
-        try:
-            return _MULTIFRAME_WRITERS[format]
-        except KeyError:
-            raise TypeError(
-                "No trajectory writer for format {0}"
-                "".format(format))
+        options = _MULTIFRAME_WRITERS
+        errmsg = "No trajectory writer for format '{0}'"
     elif multiframe is False:
-        try:
-            return _SINGLEFRAME_WRITERS[format]
-        except KeyError:
-            raise TypeError(
-                "No single frame writer for format {0}".format(format))
+        options = _SINGLEFRAME_WRITERS
+        errmsg = "No single frame writer for format '{0}'"
     else:
         raise ValueError("Unknown value '{0}' for multiframe,"
                          " only True, False, None allowed"
                          "".format(multiframe))
+
+    try:
+        return options[format]
+    except KeyError:
+        raise TypeError(errmsg.format(format))
 
 
 def get_parser_for(filename, format=None):
@@ -195,10 +199,19 @@ def get_parser_for(filename, format=None):
     Automatic detection is disabled when an explicit `format` is
     provided.
 
+    Parameters
+    ----------
+    filename : str or mmtf.MMTFDecoder
+        name of the topology file; if this is an instance of
+        :class:`mmtf.MMTFDecoder` then directly use the MMTF format.
+    format : str
+        description of the file format
+
     Raises
     ------
     ValueError
         If no appropriate parser could be found.
+
     """
     if inspect.isclass(format):
         return format

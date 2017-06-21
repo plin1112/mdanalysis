@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -47,8 +47,8 @@ The module also contains the :func:`do_inputrec` to read the TPR header with.
 """
 from __future__ import absolute_import
 
-import numpy as np
 from six.moves import range
+import numpy as np
 
 from . import obj
 from . import setting as S

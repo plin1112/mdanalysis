@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -28,6 +28,13 @@ Base classes --- :mod:`MDAnalysis.coordinates.base`
 Derive other Timestep, Reader and Writer classes from the classes in
 this module. The derived classes must follow the :ref:`Trajectory API`
 in :mod:`MDAnalysis.coordinates.__init__`.
+
+Timestep
+--------
+
+A :class:`Timestep` holds information for the current time frame in
+the trajectory. It is one of the central data structures in
+MDAnalysis.
 
 .. class:: Timestep
 
@@ -107,45 +114,87 @@ in :mod:`MDAnalysis.coordinates.__init__`.
    .. automethod:: copy
    .. automethod:: copy_slice
 
-.. autoclass:: IObase
+
+Readers
+-------
+
+Readers know how to take trajectory data in a given format and present it in a
+common API to the user in MDAnalysis. There are two types of readers:
+
+1. Readers for *multi frame trajectories*, i.e., file formats that typically
+   contain many frames. These readers are typically derived from
+   :class:`ReaderBase`.
+
+2. Readers for *single frame formats*: These file formats only contain a single
+   coordinate set. These readers are derived from
+   :class`:SingleFrameReaderBase`.
+
+The underlying low-level readers handle closing of files in different
+ways. Typically, the MDAnalysis readers try to ensure that files are always
+closed when a reader instance is garbage collected, which relies on
+implementing a :meth:`~ReaderBase.__del__` method. However, in some cases, this
+is not necessary (for instance, for the single frame formats) and then such a
+method can lead to undesirable side effects (such as memory leaks). In this
+case, :class:`ProtoReader` should be used.
+
+
+.. autoclass:: ReaderBase
    :members:
+   :inherited-members:
+
+.. autoclass:: SingleFrameReaderBase
+   :members:
+   :inherited-members:
 
 .. autoclass:: ProtoReader
    :members:
 
-.. autoclass:: Reader
+
+
+Writers
+-------
+
+Writers know how to write information in a :class:`Timestep` to a trajectory
+file.
+
+.. autoclass:: WriterBase
    :members:
    :inherited-members:
 
-.. autoclass:: Writer
+
+Helper classes
+--------------
+
+The following classes contain basic functionality that all readers and
+writers share.
+
+.. autoclass:: IOBase
    :members:
-   :inherited-members:
 
 """
 from __future__ import absolute_import
-
-from six.moves import range
 import six
-
-import warnings
+from six.moves import range
 
 import numpy as np
+import numbers
 import copy
+import warnings
 import weakref
 
+from . import core
+from .. import NoDataError
 from .. import (
     _READERS,
     _SINGLEFRAME_WRITERS,
     _MULTIFRAME_WRITERS,
 )
-from ..core import flags
 from .. import units
-from ..lib.util import asiterable, Namespace
-from . import core
-from .. import NoDataError
-
 from ..auxiliary.base import AuxReader
 from ..auxiliary.core import auxreader
+from ..core import flags
+from ..lib.util import asiterable, Namespace
+
 
 class Timestep(object):
     """Timestep data for one frame
@@ -159,10 +208,10 @@ class Timestep(object):
     .. versionchanged:: 0.11.0
        Added :meth:`from_timestep` and :meth:`from_coordinates` constructor
        methods.
-       :class:`Timestep` init now only accepts integer creation
-       :attr:`n_atoms` now a read only property
-       :attr:`frame` now 0-based instead of 1-based
-       Attributes status and step removed
+       :class:`Timestep` init now only accepts integer creation.
+       :attr:`n_atoms` now a read only property.
+       :attr:`frame` now 0-based instead of 1-based.
+       Attributes `status` and `step` removed.
     """
     order = 'F'
 
@@ -175,23 +224,24 @@ class Timestep(object):
           The total number of atoms this Timestep describes
         positions : bool, optional
           Whether this Timestep has position information [``True``]
-        velocities : bool, optional
+        velocities : bool (optional)
           Whether this Timestep has velocity information [``False``]
-        forces : bool, optional
+        forces : bool (optional)
           Whether this Timestep has force information [``False``]
-        reader : Reader, optional
+        reader : Reader (optional)
           A weak reference to the owning Reader.  Used for
           when attributes require trajectory manipulation (e.g. dt)
-        dt : float, optional
+        dt : float (optional)
           The time difference between frames (ps).  If :attr:`time`
           is set, then `dt` will be ignored.
-        time_offset : float, optional
-          The starting time from which to calculate time (ps)
+        time_offset : float (optional)
+          The starting time from which to calculate time (in ps)
 
-          .. versionchanged:: 0.11.0
-             Added keywords for `positions`, `velocities` and `forces`.
-             Can add and remove position/velocity/force information by using
-             the ``has_*`` attribute.
+
+        .. versionchanged:: 0.11.0
+           Added keywords for `positions`, `velocities` and `forces`.
+           Can add and remove position/velocity/force information by using
+           the ``has_*`` attribute.
         """
         # readers call Reader._read_next_timestep() on init, incrementing
         # self.frame to 0
@@ -364,7 +414,7 @@ class Timestep(object):
            correspond to atom indices,
            :attr:`MDAnalysis.core.groups.Atom.index` (0-based)
         """
-        if isinstance(atoms, int):
+        if isinstance(atoms, numbers.Integral):
             return self._pos[atoms]
         elif isinstance(atoms, (slice, np.ndarray)):
             return self._pos[atoms]
@@ -400,25 +450,41 @@ class Timestep(object):
         return self.from_timestep(self)
 
     def copy_slice(self, sel):
-        """Make a new Timestep containing a subset of the original Timestep.
+        """Make a new `Timestep` containing a subset of the original `Timestep`.
 
-        ``ts.copy_slice(slice(start, stop, skip))``
-        ``ts.copy_slice([list of indices])``
+        Parameters
+        ----------
+        sel : array_like or slice
+            The underlying position, velocity, and force arrays are sliced
+            using a :class:`list`, :class:`slice`, or any array-like.
 
         Returns
         -------
-        A Timestep object of the same type containing all header
-        information and all atom information relevant to the selection.
+        :class:`Timestep`
+            A `Timestep` object of the same type containing all header
+            information and all atom information relevant to the selection.
 
         Note
         ----
-        The selection must be a 0 based slice or array of the atom indices
-        in this Timestep
+        The selection must be a 0 based :class:`slice` or array of the atom indices
+        in this :class:`Timestep`
+
+        Example
+        -------
+        Using a Python :class:`slice` object::
+
+           new_ts = ts.copy_slice(slice(start, stop, step))
+
+        Using a list of indices::
+
+           new_ts = ts.copy_slice([0, 2, 10, 20, 23])
+
 
         .. versionadded:: 0.8
         .. versionchanged:: 0.11.0
            Reworked to follow new Timestep API.  Now will strictly only
            copy official attributes of the Timestep.
+
         """
         # Detect the size of the Timestep by doing a dummy slice
         try:
@@ -512,16 +578,17 @@ class Timestep(object):
 
         Returns
         -------
-          A numpy.ndarray of shape (n_atoms, 3) of position data for each
-          atom
+        positions : numpy.ndarray with dtype numpy.float32
+               position data of shape ``(n_atoms, 3)`` for all atoms
 
         Raises
         ------
-          :class:`MDAnalysis.exceptions.NoDataError`
-          If the Timestep has no position data
+        :exc:`MDAnalysis.exceptions.NoDataError`
+               if the Timestep has no position data
+
 
         .. versionchanged:: 0.11.0
-           Now can raise NoDataError when no position data present
+           Now can raise :exc`NoDataError` when no position data present
         """
         if self.has_positions:
             return self._pos
@@ -589,13 +656,14 @@ class Timestep(object):
 
         Returns
         -------
-          A numpy.ndarray of shape (n_atoms, 3) of velocity data for each
-          atom
+        velocities : numpy.ndarray with dtype numpy.float32
+               velocity data of shape ``(n_atoms, 3)`` for all atoms
 
         Raises
         ------
-          :class:`MDAnalysis.exceptions.NoDataError`
-          When the Timestep does not contain velocity information
+        :exc:`MDAnalysis.exceptions.NoDataError`
+               if the Timestep has no velocity data
+
 
         .. versionadded:: 0.11.0
         """
@@ -638,13 +706,14 @@ class Timestep(object):
 
         Returns
         -------
-        A numpy.ndarray of shape (n_atoms, 3) of force data for each
-        atom
+        forces : numpy.ndarray with dtype numpy.float32
+               force data of shape ``(n_atoms, 3)`` for all atoms
 
         Raises
         ------
-        :class:`MDAnalysis.NoDataError`
-        When the Timestep does not contain force information
+        :exc:`MDAnalysis.exceptions.NoDataError`
+               if the Timestep has no force data
+
 
         .. versionadded:: 0.11.0
         """
@@ -689,7 +758,8 @@ class Timestep(object):
 
         Returns
         -------
-        A (3, 3) numpy.ndarray of unit cell vectors
+        numpy.ndarray
+             A (3, 3) numpy.ndarray of unit cell vectors
 
         Examples
         --------
@@ -711,8 +781,10 @@ class Timestep(object):
           array([ 15.        ,  15.81138802,  16.58312416,  67.58049774,
                   72.45159912,  71.56504822], dtype=float32)
 
-        .. SeeAlso::
-           :func:`MDAnalysis.lib.mdamath.triclinic_vectors`
+        See Also
+        --------
+        :func:`MDAnalysis.lib.mdamath.triclinic_vectors`
+
 
         .. versionadded:: 0.11.0
         """
@@ -733,6 +805,7 @@ class Timestep(object):
         Note
         ----
         This defaults to 1.0 ps in the absence of time data
+
 
         .. versionadded:: 0.11.0
         """
@@ -785,7 +858,7 @@ class Timestep(object):
         del self.data['time']
 
 
-class IObase(object):
+class IOBase(object):
     """Base class bundling common functionality for trajectory I/O.
 
     .. versionchanged:: 0.8
@@ -803,17 +876,20 @@ class IObase(object):
         ----------
         x : array_like
           Positions to transform
-        inplace : bool, optional
+        inplace : bool (optional)
           Whether to modify the array inplace, overwriting previous data
 
         Note
         ----
-        By default, the input *x* is modified in place and also returned.
+        By default, the input `x` is modified in place and also returned.
+        In-place operations improve performance because allocating new arrays
+        is avoided.
+
 
         .. versionchanged:: 0.7.5
-           Keyword *inplace* can be set to ``False`` so that a
+           Keyword `inplace` can be set to ``False`` so that a
            modified copy is returned *unless* no conversion takes
-           place, in which case the reference to the unmodified *x* is
+           place, in which case the reference to the unmodified `x` is
            returned.
 
         """
@@ -833,12 +909,15 @@ class IObase(object):
         ----------
         v : array_like
           Velocities to transform
-        inplace : bool, optional
+        inplace : bool (optional)
           Whether to modify the array inplace, overwriting previous data
 
         Note
         ----
         By default, the input *v* is modified in place and also returned.
+        In-place operations improve performance because allocating new arrays
+        is avoided.
+
 
         .. versionadded:: 0.7.5
         """
@@ -858,12 +937,14 @@ class IObase(object):
         ----------
         force : array_like
           Forces to transform
-        inplace : bool, optional
+        inplace : bool (optional)
           Whether to modify the array inplace, overwriting previous data
 
         Note
         ----
         By default, the input *force* is modified in place and also returned.
+        In-place operations improve performance because allocating new arrays
+        is avoided.
 
         .. versionadded:: 0.7.7
         """
@@ -883,20 +964,22 @@ class IObase(object):
         ----------
         t : array_like
           Time values to transform
-        inplace : bool, optional
+        inplace : bool (optional)
           Whether to modify the array inplace, overwriting previous data
 
         Note
         ----
-        By default, the input *t* is modified in place and also
-        returned (although note that scalar values *t* are passed by
-        value in Python and hence an in-place modification has no
-        effect on the caller.)
+        By default, the input `t` is modified in place and also returned
+        (although note that scalar values `t` are passed by value in Python and
+        hence an in-place modification has no effect on the caller.)  In-place
+        operations improve performance because allocating new arrays is
+        avoided.
+
 
         .. versionchanged:: 0.7.5
-           Keyword *inplace* can be set to ``False`` so that a
+           Keyword `inplace` can be set to ``False`` so that a
            modified copy is returned *unless* no conversion takes
-           place, in which case the reference to the unmodified *x* is
+           place, in which case the reference to the unmodified `x` is
            returned.
 
         """
@@ -910,23 +993,26 @@ class IObase(object):
         return t
 
     def convert_pos_to_native(self, x, inplace=True):
-        """Conversion of coordinate array x from base units to native units.
+        """Conversion of coordinate array `x` from base units to native units.
 
         Parameters
         ----------
         x : array_like
           Positions to transform
-        inplace : bool, optional
+        inplace : bool (optional)
           Whether to modify the array inplace, overwriting previous data
 
         Note
         ----
-        By default, the input *x* is modified in place and also returned.
+        By default, the input `x` is modified in place and also returned.
+        In-place operations improve performance because allocating new arrays
+        is avoided.
+
 
         .. versionchanged:: 0.7.5
-           Keyword *inplace* can be set to ``False`` so that a
+           Keyword `inplace` can be set to ``False`` so that a
            modified copy is returned *unless* no conversion takes
-           place, in which case the reference to the unmodified *x* is
+           place, in which case the reference to the unmodified `x` is
            returned.
 
         """
@@ -940,18 +1026,21 @@ class IObase(object):
         return x
 
     def convert_velocities_to_native(self, v, inplace=True):
-        """Conversion of coordinate array *v* from base to native units
+        """Conversion of coordinate array `v` from base to native units
 
         Parameters
         ----------
         v : array_like
           Velocities to transform
-        inplace : bool, optional
+        inplace : bool (optional)
           Whether to modify the array inplace, overwriting previous data
 
         Note
         ----
-        By default, the input *v* is modified in place and also returned.
+        By default, the input `v` is modified in place and also returned.
+        In-place operations improve performance because allocating new arrays
+        is avoided.
+
 
         .. versionadded:: 0.7.5
         """
@@ -971,12 +1060,15 @@ class IObase(object):
         ----------
         force : array_like
           Forces to transform
-        inplace : bool, optional
+        inplace : bool (optional)
           Whether to modify the array inplace, overwriting previous data
 
         Note
         ----
-        By default, the input *force* is modified in place and also returned.
+        By default, the input `force` is modified in place and also returned.
+        In-place operations improve performance because allocating new arrays
+        is avoided.
+
 
         .. versionadded:: 0.7.7
         """
@@ -1049,10 +1141,10 @@ class _Readermeta(type):
                 _READERS[f] = cls
 
 
-class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
+class ProtoReader(six.with_metaclass(_Readermeta, IOBase)):
     """Base class for Readers, without a :meth:`__del__` method.
 
-    Extends :class:`IObase` with most attributes and methods of a generic
+    Extends :class:`IOBase` with most attributes and methods of a generic
     Reader, with the exception of a :meth:`__del__` method. It should be used
     as base for Readers that do not need :meth:`__del__`, especially since
     having even an empty :meth:`__del__` might lead to memory leaks.
@@ -1061,7 +1153,10 @@ class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
     :mod:`MDAnalysis.coordinates.__init__` for the required attributes and
     methods.
 
-    .. SeeAlso:: :class:`Reader`
+    See Also
+    --------
+    :class:`ReaderBase`
+
 
     .. versionchanged:: 0.11.0
        Frames now 0-based instead of 1-based
@@ -1147,7 +1242,11 @@ class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
         Sets the default keywords *start*, *step* and *dt* (if
         available). *n_atoms* is always set from :attr:`Reader.n_atoms`.
 
-        .. SeeAlso:: :meth:`Reader.Writer` and :func:`MDAnalysis.Writer`
+
+        See Also
+        --------
+        :meth:`Reader.Writer` and :func:`MDAnalysis.Writer`
+
         """
         kwargs['n_atoms'] = self.n_atoms  # essential
         kwargs.setdefault('start', self.frame)
@@ -1181,7 +1280,7 @@ class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
     def __getitem__(self, frame):
         """Return the Timestep corresponding to *frame*.
 
-        If *frame* is a integer then the corresponding frame is
+        If `frame` is a integer then the corresponding frame is
         returned. Negative numbers are counted from the end.
 
         If frame is a :class:`slice` then an iterator is returned that
@@ -1191,6 +1290,7 @@ class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
         ----
         *frame* is a 0-based frame index.
         """
+
         def apply_limits(frame):
             if frame < 0:
                 frame += len(self)
@@ -1199,7 +1299,7 @@ class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
                                  "".format(frame, len(self)))
             return frame
 
-        if isinstance(frame, int):
+        if isinstance(frame, numbers.Integral):
             frame = apply_limits(frame)
             return self._read_frame_with_aux(frame)
         elif isinstance(frame, (list, np.ndarray)):
@@ -1211,9 +1311,10 @@ class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
 
             def listiter(frames):
                 for f in frames:
-                    if not isinstance(f, (int, np.integer)):
+                    if not isinstance(f, numbers.Integral):
                         raise TypeError("Frames indices must be integers")
                     yield self._read_frame_with_aux(apply_limits(f))
+
             return listiter(frame)
         elif isinstance(frame, slice):
             start, stop, step = self.check_slice_indices(
@@ -1264,27 +1365,67 @@ class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
                             "".format(self.__class__.__name__))
 
     def check_slice_indices(self, start, stop, step):
-        """Check frame indices are valid and clip to fit trajectory
+        """Check frame indices are valid and clip to fit trajectory.
+
+        The usage follows standard Python conventions for :func:`range` but see
+        the warning below.
 
         Parameters
         ----------
-        start, stop, step : int or None
-          Values representing the slice indices.
-          Can use `None` to use defaults of (0, n_frames, and 1)
-          respectively.
+        start : int or None
+          Starting frame index (inclusive). ``None`` corresponds to the default
+          of 0, i.e., the initial frame.
+        stop : int or None
+          Last frame index (exclusive). ``None`` corresponds to the default
+          of n_frames, i.e., it includes the last frame of the trajectory.
+        step : int or None
+          step size of the slice, ``None`` corresponds to the default of 1, i.e,
+          include every frame in the range `start`, `stop`.
 
         Returns
         -------
-        start, stop, step : int
+        start, stop, step : tuple (int, int, int)
           Integers representing the slice
+
+        Warning
+        -------
+        The returned values `start`, `stop` and `step` give the expected result
+        when passed in :func:`range` but gives unexpected behavior when passed
+        in a :class:`slice` when ``stop=None`` and ``step=-1``
+
+        This can be a problem for downstream processing of the output from this
+        method. For example, slicing of trajectories is implemented by passing
+        the values returned by :meth:`check_slice_indices` to :func:`range` ::
+
+          range(start, stop, step)
+
+        and using them as the indices to randomly seek to. On the other hand,
+        in :class:`MDAnalysis.analysis.base.AnalysisBase` the values returned
+        by :meth:`check_slice_indices` are used to splice the trajectory by
+        creating a :class:`slice` instance ::
+
+          slice(start, stop, step)
+
+        This creates a discrepancy because these two lines are not equivalent::
+
+            range(10, -1, -1)             # [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
+            range(10)[slice(10, -1, -1)]  # []
+
         """
-        for var, varname in (
-                (start, 'start'),
-                (stop, 'stop'),
-                (step, 'step')
-        ):
-            if not (isinstance(var, int) or (var is None)):
+
+        slice_dict = {'start': start, 'stop': stop, 'step': step}
+        for varname, var in slice_dict.items():
+            if isinstance(var, numbers.Integral):
+                slice_dict[varname] = int(var)
+            elif (var is None):
+                pass
+            else:
                 raise TypeError("{0} is not an integer".format(varname))
+
+        start = slice_dict['start']
+        stop = slice_dict['stop']
+        step = slice_dict['step']
+
         if step == 0:
             raise ValueError("Step size is zero")
 
@@ -1295,33 +1436,30 @@ class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
             start = 0 if step > 0 else nframes - 1
         elif start < 0:
             start += nframes
+        if start < 0:
+            start = 0
 
-        if stop is not None:
-            if stop < 0:
-                stop += nframes
-            elif stop > nframes:
-                stop = nframes
-        else:
+        if step < 0 and start > nframes:
+            start = nframes - 1
+
+        if stop is None:
             stop = nframes if step > 0 else -1
+        elif stop < 0:
+            stop += nframes
 
-        if step > 0 and stop < start:
-            raise IndexError("Stop frame is lower than start frame")
-        elif step < 0 and start < stop:
-            raise IndexError("Start frame is lower than stop frame")
-        if not (0 <= start < nframes) or stop > nframes:
-            raise IndexError(
-                "Frame start/stop outside of the range of the trajectory.")
+        if step > 0 and stop > nframes:
+            stop = nframes
 
         return start, stop, step
 
     def __repr__(self):
         return ("<{cls} {fname} with {nframes} frames of {natoms} atoms>"
                 "".format(
-                    cls=self.__class__.__name__,
-                    fname=self.filename,
-                    nframes=self.n_frames,
-                    natoms=self.n_atoms
-                ))
+            cls=self.__class__.__name__,
+            fname=self.filename,
+            nframes=self.n_frames,
+            natoms=self.n_atoms
+        ))
 
     def add_auxiliary(self, auxname, auxdata, format=None, **kwargs):
         """Add auxiliary data to be read alongside trajectory.
@@ -1331,7 +1469,7 @@ class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
         :class:`~MDAnalysis.auxiliary.base.AuxReader` instance, or the data
         itself as e.g. a filename; in the latter case an appropriate
         :class:`~MDAnalysis.auxiliary.base.AuxReader` is guessed from the
-        data/file format. An appropriate *format* may also be directly provided
+        data/file format. An appropriate `format` may also be directly provided
         as a key word argument.
 
         On adding, the AuxReader is initially matched to the current timestep
@@ -1421,7 +1559,7 @@ class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
         aux = self._check_for_aux(auxname)
         ts = self.ts
         # catch up auxiliary if it starts earlier than trajectory
-        while aux.step_to_frame(aux.step+1, ts) < 0:
+        while aux.step_to_frame(aux.step + 1, ts) < 0:
             next(aux)
         # find the next frame that'll have a representative value
         next_frame = aux.next_nonempty_frame(ts)
@@ -1555,7 +1693,6 @@ class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
         setattr(self.ts.aux, new, self.ts.aux[auxname])
         delattr(self.ts.aux, auxname)
 
-
     def get_aux_descriptions(self, auxnames=None):
         """Get descriptions to allow reloading the specified auxiliaries.
 
@@ -1586,12 +1723,11 @@ class ProtoReader(six.with_metaclass(_Readermeta, IObase)):
         return descriptions
 
 
-
-class Reader(ProtoReader):
+class ReaderBase(ProtoReader):
     """Base class for trajectory readers that extends :class:`ProtoReader` with a
     :meth:`__del__` method.
 
-    New Readers should subclass :class:`Reader` and properly implement a
+    New Readers should subclass :class:`ReaderBase` and properly implement a
     :meth:`close` method, to ensure proper release of resources (mainly file
     handles). Readers that are inherently safe in this regard should subclass
     :class:`ProtoReader` instead.
@@ -1600,19 +1736,23 @@ class Reader(ProtoReader):
     :mod:`MDAnalysis.coordinates.__init__` for the required attributes and
     methods.
 
-    .. SeeAlso:: :class:`ProtoReader`
+    See Also
+    --------
+    :class:`ProtoReader`
+
 
     .. versionchanged:: 0.11.0
        Most of the base Reader class definitions were offloaded to
-       :class:`ProtoReader` so as to allow the subclassing of Readers without a
+       :class:`ProtoReader` so as to allow the subclassing of ReaderBases without a
        :meth:`__del__` method.  Created init method to create common
-       functionality, all Reader subclasses must now :func:`super` through this
+       functionality, all ReaderBase subclasses must now :func:`super` through this
        class.  Added attribute :attr:`_ts_kwargs`, which is created in init.
        Provides kwargs to be passed to :class:`Timestep`
 
     """
+
     def __init__(self, filename, convert_units=None, **kwargs):
-        super(Reader, self).__init__()
+        super(ReaderBase, self).__init__()
 
         self.filename = filename
 
@@ -1638,32 +1778,38 @@ class Reader(ProtoReader):
 
 
 class _Writermeta(type):
-    # Auto register upon class creation
+    # Auto register this format upon class creation
     def __init__(cls, name, bases, classdict):
         type.__init__(type, name, bases, classdict)
         try:
+            # grab the string which describes this format
+            # could be either 'PDB' or ['PDB', 'ENT'] for multiple formats
             fmt = asiterable(classdict['format'])
         except KeyError:
+            # not required however
             pass
         else:
-            for f in fmt:
-                f = f.upper()
-                _SINGLEFRAME_WRITERS[f] = cls
-            try:
-                if classdict['multiframe']:
-                    for f in fmt:
-                        f = f.upper()
-                        _MULTIFRAME_WRITERS[f] = cls
-            except KeyError:
-                pass
+            # does the Writer support single and multiframe writing?
+            single = classdict.get('singleframe', True)
+            multi = classdict.get('multiframe', False)
+
+            if single:
+                for f in fmt:
+                    f = f.upper()
+                    _SINGLEFRAME_WRITERS[f] = cls
+            if multi:
+                for f in fmt:
+                    f = f.upper()
+                    _MULTIFRAME_WRITERS[f] = cls
 
 
-class Writer(six.with_metaclass(_Writermeta, IObase)):
+class WriterBase(six.with_metaclass(_Writermeta, IOBase)):
     """Base class for trajectory writers.
 
     See Trajectory API definition in :mod:`MDAnalysis.coordinates.__init__` for
     the required attributes and methods.
     """
+
     def convert_dimensions_to_unitcell(self, ts, inplace=True):
         """Read dimensions from timestep *ts* and return appropriate unitcell.
 
@@ -1679,15 +1825,17 @@ class Writer(six.with_metaclass(_Writermeta, IObase)):
         return np.concatenate([lengths, angles])
 
     def write(self, obj):
-        """Write current timestep, using the supplied *obj*.
+        """Write current timestep, using the supplied `obj`.
 
-        The argument should be a :class:`~MDAnalysis.core.groups.AtomGroup` or
-        a :class:`~MDAnalysis.core.universe.Universe` or a :class:`Timestep` instance.
+        Parameters
+        ----------
+        obj : :class:`~MDAnalysis.core.groups.AtomGroup` or :class:`~MDAnalysis.core.universe.Universe` or a :class:`Timestep`
+            write coordinate information associate with `obj`
 
-        .. Note::
-
-           The size of the *obj* must be the same as the number of atom
-           provided when setting up the trajectory.
+        Note
+        ----
+        The size of the `obj` must be the same as the number of atoms provided
+        when setting up the trajectory.
         """
         if isinstance(obj, Timestep):
             ts = obj
@@ -1720,20 +1868,24 @@ class Writer(six.with_metaclass(_Writermeta, IObase)):
 
            min < x <= max
 
-        :Arguments:
-            *criteria*
-               dictionary containing the *max* and *min* values in native units
-            *x*
-               :class:`np.ndarray` of ``(x, y, z)`` coordinates of atoms selected to be written out.
-        :Returns: boolean
+        Parameters
+        ----------
+        criteria : dict
+            dictionary containing the *max* and *min* values in native units
+        x : numpy.ndarray
+            ``(x, y, z)`` coordinates of atoms selected to be written out
+
+        Returns
+        -------
+        bool
         """
         x = np.ravel(x)
         return np.all(criteria["min"] < x) and np.all(x <= criteria["max"])
 
-    # def write_next_timestep(self, ts=None)
+        # def write_next_timestep(self, ts=None)
 
 
-class SingleFrameReader(ProtoReader):
+class SingleFrameReaderBase(ProtoReader):
     """Base class for Readers that only have one frame.
 
     To use this base class, define the method :meth:`_read_first_frame` to
@@ -1747,8 +1899,8 @@ class SingleFrameReader(ProtoReader):
     """
     _err = "{0} only contains a single frame"
 
-    def __init__(self, filename, convert_units=None, **kwargs):
-        super(SingleFrameReader, self).__init__()
+    def __init__(self, filename, convert_units=None, n_atoms=None, **kwargs):
+        super(SingleFrameReaderBase, self).__init__()
 
         self.filename = filename
         if convert_units is None:
@@ -1756,6 +1908,7 @@ class SingleFrameReader(ProtoReader):
         self.convert_units = convert_units
 
         self.n_frames = 1
+        self.n_atom = n_atoms
 
         ts_kwargs = {}
         for att in ('dt', 'time_offset'):
@@ -1795,5 +1948,5 @@ class SingleFrameReader(ProtoReader):
     def close(self):
         # all single frame readers should use context managers to access
         # self.filename. Explicitly setting it to the null action in case
-        # the IObase.close method is ever changed from that.
+        # the IOBase.close method is ever changed from that.
         pass

@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -21,21 +21,18 @@
 #
 
 
-"""
-Core functions of MDAnalysis
+"""Core functions of MDAnalysis
 ============================
 
-The basic class is an :class:`~MDAnalysis.core.groups.AtomGroup`;
-the whole simulation is called the
-:class:`~MDAnalysis.core.universe.Universe`. Selections are computed
-on an :class:`~MDAnalysis.core.groups.AtomGroup` and return another
+The basic class is an :class:`~MDAnalysis.core.groups.AtomGroup`; the whole
+simulation is called the
+:class:`~MDAnalysis.core.universe.Universe`. Selections are computed on an
+:class:`~MDAnalysis.core.groups.AtomGroup` and return another
 :class:`~MDAnalysis.core.groups.AtomGroup`.
-
-:mod:`~MDAnalysis.Timeseries` are a convenient way to analyse trajectories.
 
 To get started, load the Universe::
 
-  u = Universe(psffilename,dcdfilename)
+  u = Universe(topology_file, trajectory_file)
 
 A simple selection of all water oxygens within 4 A of the protein::
 
@@ -43,9 +40,9 @@ A simple selection of all water oxygens within 4 A of the protein::
   water_shell.n_atoms           # how many waters were selected
   water_shell.total_mass()       # their total mass
 
-:class:`AtomGroup` instances have various methods that allow
-calculation of simple properties. For more complicated analysis,
-obtain the coordinates as a numpy array ::
+:class:`~MDAnalysis.core.groups.AtomGroup` instances have various methods that
+allow calculation of simple properties. For more complicated analysis, obtain
+the coordinates as a numpy array ::
 
   coords = water_shell.positions
 
@@ -56,6 +53,12 @@ and write your own Python code.
 
 Flags
 -----
+
+.. deprecated:: 0.16.2
+   The flags registry will be removed in release 1.0.
+   Use keyword arguments for functions to obtain the desired behavior.
+   See issue `#782 <https://github.com/MDAnalysis/mdanalysis/issues/782>`_
+   for more details.
 
 (This is an advanced topic and can probably be skipped by most people.)
 
@@ -85,16 +88,17 @@ Classes
 .. autoclass:: Flag
    :members:
 
-
 """
+from __future__ import absolute_import
 
 import six
 
 __all__ = ['AtomGroup', 'Selection', 'Timeseries']
 
 
-# set up flags for core routines (more convoluted than strictly necessary but should
-# be clean to add more flags if needed)
+# set up flags for core routines (more convoluted than strictly necessary but
+# should be clean to add more flags if needed)
+
 class Flags(dict):
     """Global registry of flags. Acts like a dict for item access.
 
@@ -110,6 +114,13 @@ class Flags(dict):
 
     New flags are added with the :meth:`Flags.register` method which takes a new :class:`Flag`
     instance as an argument.
+
+    .. deprecated:: 0.16.2
+       The flags registry will be removed in release 1.0.
+       Use keyword arguments for functions to obtain the desired behavior.
+       See issue `#782 <https://github.com/MDAnalysis/mdanalysis/issues/782>`_
+       for more details.
+
     """
 
     def __init__(self, *args):
@@ -181,23 +192,29 @@ class IdentityMapping(dict):
 
 
 class Flag(object):
-    """A Flag, essentially a variable that knows its default and legal values."""
+    """A Flag, essentially a variable that knows its default and legal values.
+
+    .. deprecated:: 0.16.2
+       The flags registry will be removed in release 1.0.
+       Use keyword arguments for functions to obtain the desired behavior.
+       See issue `#782 <https://github.com/MDAnalysis/mdanalysis/issues/782>`_
+       for more details.
+    """
 
     def __init__(self, name, default, mapping=None, doc=None):
-        """Create a new flag which will be registered with FLags.
+        """Create a new flag which will be registered with Flags.
 
-          newflag = Flag(name,default,mapping,doc)
-
-        :Arguments:
-         *name*
+        Parameters
+        ----------
+        name : str
             name of the flag, must be a legal python name
-         *default*
+        default
             default value
-         *mapping*
+        mapping : dict
             dict that maps allowed input values to canonical values;
             if ``None`` then no argument checking will be performed and
             all values are directly set.
-         *doc*
+        doc : str
             doc string; may contain string interpolation mappings for::
 
                     %%(name)s        name of the flag
@@ -206,6 +223,14 @@ class Flag(object):
                     %%(mapping)r     mapping
 
             Doc strings are generated dynamically and reflect the current state.
+
+
+        Example
+        -------
+        Create a new flag::
+
+            newflag = Flag(name, default, mapping, doc)
+
         """
         self.name = name
         self.value = default
@@ -264,8 +289,8 @@ _flags = [
         'use_KDTree_routines',
         'fast',
         {True: 'fast', 'fast': 'fast',  # only KDTree if advantageous
-            'always': 'always',  # always even if slower (for testing)
-            False: 'never', 'never': 'never'},  # never, only use (slower) alternatives
+         'always': 'always',  # always even if slower (for testing)
+         False: 'never', 'never': 'never'},  # never, only use (slower) alternatives
         """
            Determines which KDTree routines are used for distance selections
 
@@ -385,17 +410,6 @@ _flags = [
         """
     ),
     _Flag(
-        'permissive_pdb_reader',
-        True,
-        {
-            'primitive': True, 'permissive': True, True: True,
-            'Bio.PDB': False, 'biopython': False, False: False,
-        },
-        """
-          This flag is deprecated and will be removed in 0.16.0.
-        """
-    ),
-    _Flag(
         'use_pbc',
         False,
         {True: True, False: False},
@@ -434,5 +448,4 @@ class flagsDocs(object):
 
 from . import groups
 from . import selection
-from . import Timeseries
 from . import AtomGroup

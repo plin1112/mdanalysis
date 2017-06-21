@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -112,7 +112,11 @@ concentration:
   from `rho/rho0 = n/(N_A * M**-1) / rho0`  where `[n] = 1/Volume`, `[rho] = mass/Volume`
 
 
-.. SeeAlso:: Maybe we should simply use Quantities_ or :mod:`scipy.constants`?
+Note
+----
+In the future me might move towards using the Quantities_ package or
+:mod:`scipy.constants`.
+
 
 .. _Quantities: http://packages.python.org/quantities/
 
@@ -161,7 +165,7 @@ References and footnotes
 
 """
 
-from __future__ import unicode_literals
+from __future__ import unicode_literals, division
 
 #: `Avogadro's constant`_ in mol**-1.
 #:
@@ -344,11 +348,16 @@ def get_conversion_factor(unit_type, u1, u2):
 def convert(x, u1, u2):
     """Convert value *x* in unit *u1* to new value in *u2*.
 
-    :Returns: Converted value.
+    Returns
+    -------
+    float
+        Converted value.
 
-    :Raises: :Exc:`ValueError` if the units are not known or if
-             one attempts to convert between incompatible
-             units.
+    Raises
+    ------
+    ValueError
+        The units are not known or if one attempts to convert between
+        incompatible units.
     """
     try:
         ut1 = unit_types[u1]

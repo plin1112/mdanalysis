@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -29,21 +29,27 @@ any output files. This is similar to writing to ``/dev/null``.
 
 This class exists to allow developers writing generic code and tests.
 
+Classes
+-------
+
+.. autoclass:: NullWriter
+   :members:
+
 """
 from __future__ import absolute_import
 
 from . import base
 
 
-class NullWriter(base.Writer):
+class NullWriter(base.WriterBase):
     """A trajectory Writer that does not do anything.
 
     The NullWriter is the equivalent to ``/dev/null``: it behaves like
     a Writer but ignores all input. It can be used in order to
     suppress output.
-
     """
     format = 'NULL'
+    multiframe = True
     units = {'time': 'ps', 'length': 'Angstrom'}
 
     def __init__(self, filename, **kwargs):

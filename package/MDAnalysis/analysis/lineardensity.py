@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -27,7 +27,7 @@ A tool to compute mass and charge density profiles along the three
 cartesian axes of the simulation cell. Works only for orthorombic,
 fixed volume cells (thus for simulations in canonical NVT ensemble).
 """
-from __future__ import division
+from __future__ import division, absolute_import
 
 import os.path as path
 import numpy as np

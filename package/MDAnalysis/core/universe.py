@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -47,6 +47,11 @@ Working with Universes
 Quick segid selection
 ---------------------
 
+.. deprecated:: 0.16.2
+   Instant selectors will be removed in the 1.0 release.  See issue `#1377
+   <https://github.com/MDAnalysis/mdanalysis/issues/1377>`_ for more details.
+
+
 If the loaded topology provided segids, then these are made accessible
 as attributes of the Universe.  If the segid starts with a number such
 as '4AKE', the letter 's' will be prepended to the segid.
@@ -74,6 +79,8 @@ Functions
 .. autofunction:: Merge
 
 """
+from __future__ import absolute_import
+from six.moves import range
 import six
 
 import errno
@@ -89,7 +96,7 @@ from .. import _ANCHOR_UNIVERSES
 from ..exceptions import NoDataError
 from ..lib import util
 from ..lib.log import ProgressMeter, _set_verbose
-from ..lib.util import cached
+from ..lib.util import cached, NamedStream, isstream
 from . import groups
 from ._get_readers import get_reader_for, get_parser_for
 from .groups import (GroupBase, Atom, Residue, Segment,
@@ -139,7 +146,7 @@ class Universe(object):
 
     Parameters
     ----------
-    topology : filename or Topology object
+    topology : str, Topology object or stream
         A CHARMM/XPLOR PSF topology file, PDB file or Gromacs GRO file; used to
         define the list of atoms. If the file includes bond information,
         partial charges, atom masses, ... then these data will be available to
@@ -149,7 +156,7 @@ class Universe(object):
     topology_format
         Provide the file format of the topology file; ``None`` guesses it from
         the file extension [``None``] Can also pass a subclass of
-        :class:`MDAnalysis.topology.base.TopologyReader` to define a custom
+        :class:`MDAnalysis.topology.base.TopologyReaderBase` to define a custom
         reader to be used on the topology file.
     format
         Provide the file format of the coordinate or trajectory file; ``None``
@@ -157,8 +164,8 @@ class Universe(object):
         effect if a list of file names is supplied because the "chained" reader
         has to guess the file format for each individual list member.
         [``None``] Can also pass a subclass of
-        :class:`MDAnalysis.coordinates.base.Reader` to define a custom reader
-        to be used on the trajectory file.
+        :class:`MDAnalysis.coordinates.base.ProtoReader` to define a custom
+        reader to be used on the trajectory file.
     guess_bonds : bool, optional
         Once Universe has been loaded, attempt to guess the connectivity
         between atoms.  This will populate the .bonds .angles and .dihedrals
@@ -225,7 +232,13 @@ class Universe(object):
                 self._topology = args[0]
                 self.filename = None
             else:
-                self.filename = args[0]
+                if isstream(args[0]):
+                    filename = None
+                    if hasattr(args[0], 'name'):
+                        filename = args[0].name
+                    self.filename = NamedStream(args[0], filename)
+                else:
+                    self.filename = args[0]
                 parser = get_parser_for(self.filename, format=topology_format)
                 try:
                     with parser(self.filename) as p:
@@ -251,17 +264,20 @@ class Universe(object):
             self._generate_from_topology()
 
             # Load coordinates
-            # if passed Topology object as top
-            if self.filename is None:
-                coordinatefile = None
-            elif len(args) == 1:
-                # Can the topology file also act as coordinate file?
-                try:
-                    _ = get_reader_for(self.filename, format=kwargs.get('format', None))
-                except ValueError:
+            if len(args) == 1:
+                if self.filename is None:
+                    # If we got the topology as a Topology object, then we
+                    # cannot read coordinates from it.
                     coordinatefile = None
                 else:
-                    coordinatefile = [self.filename]
+                    # Can the topology file also act as coordinate file?
+                    try:
+                        _ = get_reader_for(self.filename,
+                                           format=kwargs.get('format', None))
+                    except ValueError:
+                        coordinatefile = None
+                    else:
+                        coordinatefile = [self.filename]
             else:
                 coordinatefile = args[1:]
             self.load_new(coordinatefile, **kwargs)
@@ -302,6 +318,10 @@ class Universe(object):
 
         # Update Universe namespace with segids
         # Many segments can have same segid, so group together first
+        #
+        # DEPRECATED in 0.16.2
+        # REMOVE in 1.0
+        # See https://github.com/MDAnalysis/mdanalysis/issues/1377
         try:
             # returns dict of segid:segment
             segids = self.segments.groupby('segids')
@@ -353,7 +373,7 @@ class Universe(object):
             keyword has no effect if a list of file names is supplied because
             the "chained" reader has to guess the file format for each
             individual list member [``None``]. Can also pass a subclass of
-            :class:`MDAnalysis.coordinates.base.Reader` to define a custom
+            :class:`MDAnalysis.coordinates.base.ProtoReader` to define a custom
             reader to be used on the trajectory file.
         in_memory : bool (optional)
             Directly load trajectory into memory with the
@@ -428,7 +448,8 @@ class Universe(object):
 
         return filename, self.trajectory.format
 
-    def transfer_to_memory(self, start=None, stop=None, step=None, verbose=None, quiet=None):
+    def transfer_to_memory(self, start=None, stop=None, step=None,
+                           verbose=None, quiet=None):
         """Transfer the trajectory to in memory representation.
 
         Replaces the current trajectory reader object with one of type
@@ -464,31 +485,38 @@ class Universe(object):
             # if the Timeseries extraction fails,
             # fall back to a slower approach
             except AttributeError:
-                pm = ProgressMeter(self.trajectory.n_frames,
-                                   interval=step, verbose=verbose)
+                n_frames = len(range(
+                    *self.trajectory.check_slice_indices(start, stop, step)
+                ))
+                pm_format = '{step}/{numsteps} frames copied to memory (frame {frame})'
+                pm = ProgressMeter(n_frames, interval=1,
+                                   verbose=verbose, format=pm_format)
                 coordinates = []  # TODO: use pre-allocated array
-                for ts in self.trajectory[start:stop:step]:
+                for i, ts in enumerate(self.trajectory[start:stop:step]):
                     coordinates.append(np.copy(ts.positions))
-                    pm.echo(ts.frame)
+                    pm.echo(i, frame=ts.frame)
                 coordinates = np.array(coordinates)
 
             # Overwrite trajectory in universe with an MemoryReader
             # object, to provide fast access and allow coordinates
             # to be manipulated
+            if step is None:
+                step = 1
             self.trajectory = MemoryReader(
                 coordinates,
                 dimensions=self.trajectory.ts.dimensions,
-                dt=self.trajectory.ts.dt)
+                dt=self.trajectory.ts.dt * step,
+                filename=self.trajectory.filename)
 
     # python 2 doesn't allow an efficient splitting of kwargs in function
     # argument signatures.
-    # In python3-only we'd be able to explicitely define this function with
+    # In python3-only we'd be able to explicitly define this function with
     # something like (sel, *othersels, updating=False, **selgroups)
     def select_atoms(self, *args, **kwargs):
         """Select atoms.
 
-        SeeAlso
-        -------
+        See Also
+        --------
         :meth:`MDAnalysis.core.groups.AtomGroup.select_atoms`
         """
         return self.atoms.select_atoms(*args, **kwargs)
@@ -840,7 +868,9 @@ def as_Universe(*args, **kwargs):
          as_Universe(PSF, DCD, **kwargs) --> Universe(PSF, DCD, **kwargs)
          as_Universe(*args, **kwargs) --> Universe(*args, **kwargs)
 
-    :Returns: an instance of :class:`~MDAnalysis.core.groups.Universe`
+    Returns
+    -------
+    :class:`~MDAnalysis.core.groups.Universe`
     """
     if len(args) == 0:
         raise TypeError("as_Universe() takes at least one argument (%d given)" % len(args))
@@ -862,9 +892,12 @@ def Merge(*args):
     -------
     universe : :class:`Universe`
 
-    :Raises: :exc:`ValueError` for too few arguments or if an AtomGroup is
-             empty and :exc:`TypeError` if arguments are not
-             :class:`AtomGroup` instances.
+    Raises
+    ------
+    ValueError
+        Too few arguments or an AtomGroup is empty and
+    TypeError
+        Arguments are not :class:`AtomGroup` instances.
 
     Notes
     -----
@@ -904,8 +937,12 @@ def Merge(*args):
     The complete system is then written out to a new PDB file.
 
 
-    .. versionchanged 0.9.0::
+    .. versionchanged:: 0.9.0
        Raises exceptions instead of assertion errors.
+
+    .. versionchanged:: 0.16.0
+       The trajectory is now a
+       :class:`~MDAnalysis.coordinates.memory.MemoryReader`.
 
     """
     from ..topology.base import squash_by
@@ -976,8 +1013,7 @@ def Merge(*args):
             tg = tg.atomgroup_intersection(ag, strict=True)
 
             # Map them so they refer to our new indices
-            new_idx = [tuple(map(lambda x:mapping[x], entry))
-                       for entry in tg.indices]
+            new_idx = [tuple([mapping[x] for x in entry]) for entry in tg.indices]
             bondidx.extend(new_idx)
             if hasattr(tg, '_bondtypes'):
                 types.extend(tg._bondtypes)
@@ -1021,15 +1057,9 @@ def Merge(*args):
                    atom_resindex=residx,
                    residue_segindex=segidx)
 
-    # Create blank Universe only from topology
-    u = Universe(top)
-
-    # Take one frame of coordinates from combined atomgroups
+    # Create and populate a universe
     coords = np.vstack([a.positions for a in args])
-    trajectory = MDAnalysis.coordinates.base.Reader(None)
-    ts = MDAnalysis.coordinates.base.Timestep.from_coordinates(coords)
-    setattr(trajectory, "ts", ts)
-    trajectory.n_frames = 1
-    u.trajectory = trajectory
+    u = Universe(top, coords[None, :, :],
+                 format=MDAnalysis.coordinates.memory.MemoryReader)
 
     return u

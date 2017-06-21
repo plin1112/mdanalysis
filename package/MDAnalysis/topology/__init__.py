@@ -2,7 +2,7 @@
 # vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -19,7 +19,7 @@
 # MDAnalysis: A Toolkit for the Analysis of Molecular Dynamics Simulations.
 # J. Comput. Chem. 32 (2011), 2319--2327, doi:10.1002/jcc.21787
 #
-"""\
+"""
 Topology readers --- :mod:`MDAnalysis.topology`
 ===============================================
 
@@ -76,7 +76,8 @@ the attributes they provide.
    PQR [#a]_         pqr       names, charges,   PDB-like but whitespace-separated files with charge
                                types,            and radius information;
                                radii, resids,    :mod:`MDAnalysis.topology.PQRParser`
-                               resnames, segids
+                               resnames, icodes,
+                               segids
 
    PDBQT [#a]_       pdbqt     names, types,     file format used by AutoDock with atom types and
                                altLocs, charges, partial charges. Module:
@@ -156,12 +157,15 @@ the attributes they provide.
         parsing coordinates from a TPR file is currently not implemented
         in :mod:`~MDAnalysis.topology.TPRParser`.
 
-.. SeeAlso:: :ref:`Coordinates` with the :ref:`Supported coordinate formats`
+Note
+----
+:ref:`Coordinates` with the :ref:`Supported coordinate formats`
+
 
 .. _HOOMD XML: http://codeblue.umich.edu/hoomd-blue/doc/page_xml_file_format.html
 .. _Macromolecular Transmission Format (MMTF): https://mmtf.rcsb.org/
-
 .. _topology-parsers-developer-notes:
+
 
 Developer Notes
 ---------------
@@ -191,8 +195,8 @@ trajectory. This includes
 Topology readers are generally called "parsers" in MDAnalysis (for
 historical reasons and in order to distinguish them from coordinate
 "readers"). All parsers are derived from
-:class:`MDAnalysis.topology.base.TopologyReader` and have a
-:meth:`~MDAnalysis.topology.base.TopologyReader.parse` method that
+:class:`MDAnalysis.topology.base.TopologyReaderBase` and have a
+:meth:`~MDAnalysis.topology.base.TopologyReaderBase.parse` method that
 returns a :class:`MDAnalysis.core.topology.Topology` instance.
 
 
@@ -207,7 +211,11 @@ to index the various components of the topology database
 initialize the :class:`~MDAnalysis.core.topology.Topology` with the
 data read from the topology file.
 
-.. SeeAlso:: :ref:`topology-system-label`
+
+See Also
+--------
+:ref:`topology-system-label`
+
 
 bonds
 ~~~~~~
@@ -254,6 +262,7 @@ four atoms need not be sequentially bonded, and are instead often all bonded
 to the second atom.
 
 """
+from __future__ import absolute_import
 
 __all__ = ['core', 'PSFParser', 'PDBParser', 'PQRParser', 'GROParser',
            'CRDParser', 'TOPParser', 'PDBQTParser', 'TPRParser',
@@ -264,7 +273,6 @@ from . import core
 from . import PSFParser
 from . import TOPParser
 from . import PDBParser
-from . import PrimitivePDBParser
 from . import ExtendedPDBParser
 from . import PQRParser
 from . import GROParser

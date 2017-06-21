@@ -1,8 +1,8 @@
 # -*- Mode: python; tab-width: 4; indent-tabs-mode:nil; coding:utf-8 -*-
-# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4 
+# vim: tabstop=4 expandtab shiftwidth=4 softtabstop=4
 #
 # MDAnalysis --- http://www.mdanalysis.org
-# Copyright (c) 2006-2016 The MDAnalysis Development Team and contributors
+# Copyright (c) 2006-2017 The MDAnalysis Development Team and contributors
 # (see the file AUTHORS for the full list of names)
 #
 # Released under the GNU Public Licence, v2 or any higher version
@@ -31,23 +31,28 @@ partial charges (:attr:`Atom.charge`).
 * Reads a PDBQT file line by line and does not require sequential atom numbering.
 * Multi-model PDBQT files are not supported.
 
-.. Note:: Only reads atoms and their names; connectivity is not
-          deduced. Masses are guessed and set to 0 if unknown.
+Notes
+-----
+Only reads atoms and their names; connectivity is not
+deduced. Masses are guessed and set to 0 if unknown.
 
-.. SeeAlso:: `MDAnalysis.coordinates.PDBQT`
+
+See Also
+--------
+`MDAnalysis.coordinates.PDBQT`
+
+
+Classes
+-------
+.. autoclass:: PDBQTParser
+   :members:
+   :inherited-members:
+
 
 .. _PDBQT:
    http://autodock.scripps.edu/faqs-help/faq/what-is-the-format-of-a-pdbqt-file
 .. _AutoDock:
    http://autodock.scripps.edu/
-
-Classes
--------
-
-.. autoclass:: PDBQTParser
-   :members:
-   :inherited-members:
-
 """
 from __future__ import absolute_import
 
@@ -55,7 +60,7 @@ import numpy as np
 
 from . import guessers
 from ..lib import util
-from .base import TopologyReader, change_squash
+from .base import TopologyReaderBase, change_squash
 from ..core.topology import Topology
 from ..core.topologyattrs import (
     Atomids,
@@ -73,7 +78,7 @@ from ..core.topologyattrs import (
 )
 
 
-class PDBQTParser(TopologyReader):
+class PDBQTParser(TopologyReaderBase):
     """Read topology from a PDBQT file.
 
     Creates the following Attributes:
